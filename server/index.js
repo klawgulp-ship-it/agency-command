@@ -23,9 +23,7 @@ import db from './db/connection.js';
 // Clean dead feeds (Upwork RSS is gone, WeWorkRemotely requires payment)
 db.prepare("DELETE FROM feeds WHERE url LIKE '%upwork.com%' OR url LIKE '%weworkremotely.com%'").run();
 
-// Purge old jobs so they re-scrape with new scoring
-db.prepare("DELETE FROM jobs").run();
-db.prepare("DELETE FROM clients WHERE job_id IS NOT NULL").run();
+// One-time purge done — jobs now re-scraped with new scoring
 
 const feedCount = db.prepare('SELECT COUNT(*) as c FROM feeds').get().c;
 if (feedCount === 0) {
