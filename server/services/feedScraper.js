@@ -80,8 +80,8 @@ export async function scrapeFeed(feedUrl, source = 'Custom') {
 
       job.score = scoreJob(job);
 
-      // Only import if score >= 50
-      if (job.score >= 50) {
+      // Import all scored jobs (filter in UI instead)
+      if (job.score >= 20) {
         insertJob.run(job.id, job.title, job.source, job.client, job.budget, job.description, job.url, job.skills, job.score, job.est_value, job.est_time, job.posted_at);
         imported++;
       }

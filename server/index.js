@@ -17,9 +17,12 @@ import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 
 // Run seed on first boot if DB is empty
 import db from './db/connection.js';
+// Clean dead feeds (Upwork RSS is gone, WeWorkRemotely requires payment)
+db.prepare("DELETE FROM feeds WHERE url LIKE '%upwork.com%' OR url LIKE '%weworkremotely.com%'").run();
+
 const feedCount = db.prepare('SELECT COUNT(*) as c FROM feeds').get().c;
 if (feedCount === 0) {
-  console.log('Empty DB detected, running seed...');
+  console.log('No active feeds, running seed...');
   await import('./db/seed.js');
 }
 
