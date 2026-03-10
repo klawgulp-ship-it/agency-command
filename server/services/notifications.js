@@ -16,6 +16,53 @@ function broadcast(notification) {
   }
 }
 
+// ─── Email via Resend (free 100/day) ───
+async function sendEmail(title, message) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const toEmail = process.env.NOTIFY_EMAIL;
+  if (!apiKey || !toEmail) return;
+
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        from: 'Agency Command <notifications@resend.dev>',
+        to: [toEmail],
+        subject: title,
+        html: `<div style="font-family:sans-serif;background:#0A0A0B;color:#E0E0E4;padding:24px;border-radius:8px;">
+          <h2 style="color:#C8FF32;margin:0 0 12px;">${title}</h2>
+          <p style="color:#8B8B93;line-height:1.6;">${message}</p>
+          <hr style="border:1px solid #1E1E22;margin:16px 0;">
+          <p style="font-size:12px;color:#555;">Agency Command — SnipeLink LLC</p>
+        </div>`,
+      }),
+    });
+    console.log(`[NOTIFY] Email sent: ${title}`);
+  } catch (e) {
+    console.error('[NOTIFY] Email failed:', e.message);
+  }
+}
+
+// ─── Telegram Bot ───
+async function sendTelegram(title, message) {
+  const botToken = process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_CHAT_ID;
+  if (!botToken || !chatId) return;
+
+  try {
+    const text = `*${title}*\n\n${message}`;
+    await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'Markdown' }),
+    });
+    console.log(`[NOTIFY] Telegram sent: ${title}`);
+  } catch (e) {
+    console.error('[NOTIFY] Telegram failed:', e.message);
+  }
+}
+
 export function notify(type, title, message = '', data = {}, actionUrl = '') {
   const id = uuid();
   db.prepare(`
@@ -25,6 +72,11 @@ export function notify(type, title, message = '', data = {}, actionUrl = '') {
 
   const notification = { id, type, title, message, data, action_url: actionUrl, read: 0, created_at: new Date().toISOString() };
   broadcast(notification);
+
+  // Push to external channels (fire and forget)
+  sendEmail(title, message);
+  sendTelegram(title, message);
+
   return notification;
 }
 
