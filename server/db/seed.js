@@ -31,4 +31,5 @@ upsertSetting.run('my_skills', JSON.stringify([
 ]));
 
 console.log(`Seeded ${jobs.length} jobs + default settings.`);
-process.exit(0);
+// Only exit when run directly (not imported)
+if (process.argv[1]?.endsWith('seed.js')) process.exit(0);
