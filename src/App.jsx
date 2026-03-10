@@ -513,13 +513,15 @@ function AgentDashboard() {
 
   const runAgent = async () => {
     setRunning(true);
-    setLog(["[AGENT] Starting..."]);
+    setLog(["[AGENT] Starting... scraping feeds + generating proposals (this takes 30-60s)"]);
     try {
       const result = await api.runAgent();
-      setLog(result.log || []);
+      setLog(result.log || ["[AGENT] Complete"]);
       setLastRun(result);
       loadStats();
-    } catch (e) { setLog(["[ERROR] " + e.message]); }
+    } catch (e) {
+      setLog(["[ERROR] " + (e.message || "Request timed out — agent may still be running on server. Refresh to see results.")]);
+    }
     setRunning(false);
   };
 
