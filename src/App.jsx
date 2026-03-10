@@ -173,7 +173,8 @@ function JobMonitor({ onSelectJob }) {
               <div style={{ textAlign: "right", flexShrink: 0 }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "#C8FF32", fontFamily: "'Space Mono', monospace" }}>${(job.est_value || 0).toLocaleString()}</div>
                 <div style={{ fontSize: 11, color: "#6B6B73" }}>~{job.est_time}</div>
-                <button onClick={e => handleDismiss(e, job.id)} style={{ background: "none", border: "none", color: "#6B6B73", fontSize: 11, cursor: "pointer", marginTop: 4 }}>dismiss</button>
+                <button onClick={e => { e.stopPropagation(); onSelectJob(job); }} style={{ background: "#C8FF3220", border: "1px solid #C8FF3240", color: "#C8FF32", fontSize: 11, cursor: "pointer", marginTop: 4, borderRadius: 4, padding: "2px 8px", fontWeight: 600 }}>⚡ Apply</button>
+                <button onClick={e => handleDismiss(e, job.id)} style={{ background: "none", border: "none", color: "#6B6B73", fontSize: 11, cursor: "pointer", marginTop: 2 }}>dismiss</button>
               </div>
             </Card>
           ))}
@@ -190,41 +191,85 @@ function ProposalGenerator({ job }) {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [added, setAdded] = useState(false);
+  const [autoStatus, setAutoStatus] = useState("");
+  const lastJobId = useState({ current: null })[0];
 
-  const generate = async () => {
+  const generate = async (autoMode = false) => {
     setGenerating(true);
+    setCopied(false);
+    setAdded(false);
+    if (autoMode) setAutoStatus("Generating proposal...");
     try {
       const result = await api.generateProposal({ job });
-      setProposal(result.proposal || result.error || "Failed");
-    } catch (e) { setProposal("Error: " + e.message); }
+      const text = result.proposal || result.error || "Failed";
+      setProposal(text);
+      // Auto-copy to clipboard
+      if (result.proposal) {
+        try { await navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 3000); } catch (e) {}
+        if (autoMode) setAutoStatus("Proposal copied to clipboard! Opening job...");
+        // Auto-open job link in new tab
+        if (job.url) {
+          setTimeout(() => window.open(job.url, '_blank'), 500);
+        }
+        // Auto-add to pipeline
+        try {
+          await api.createClient({ name: job.client || "Unknown", project: job.title, stage: "proposal_sent", budget: job.est_value || 0, requirements: job.description, proposal: text, job_id: job.id });
+          setAdded(true);
+          if (autoMode) setAutoStatus("Done! Proposal copied + job opened + added to pipeline");
+        } catch (e) {}
+      }
+    } catch (e) { setProposal("Error: " + e.message); setAutoStatus(""); }
     setGenerating(false);
   };
 
+  // Auto-generate when a new job is selected
+  useEffect(() => {
+    if (job && job.id !== lastJobId.current) {
+      lastJobId.current = job.id;
+      setProposal("");
+      setAutoStatus("");
+      setAdded(false);
+      generate(true);
+    }
+  }, [job?.id]);
+
   const copyProposal = () => { navigator.clipboard.writeText(proposal); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
-  const addToPipeline = async () => {
-    try {
-      await api.createClient({ name: job.client, project: job.title, stage: "proposal_sent", budget: job.est_value || 0, requirements: job.description, proposal, job_id: job.id });
-      setAdded(true);
-    } catch (e) { console.error(e); }
-  };
+  const openJob = () => { if (job.url) window.open(job.url, '_blank'); };
 
-  if (!job) return <div style={{ textAlign: "center", padding: 60, color: "#6B6B73" }}><div style={{ fontSize: 48, marginBottom: 16 }}>📝</div><p style={{ fontSize: 15 }}>Select a job from Job Monitor to generate a proposal</p></div>;
+  if (!job) return <div style={{ textAlign: "center", padding: 60, color: "#6B6B73" }}><div style={{ fontSize: 48, marginBottom: 16 }}>📝</div><p style={{ fontSize: 15 }}>Click any job from Job Monitor — proposal auto-generates, copies, and opens the listing</p></div>;
 
   return (
     <div>
-      <div style={{ marginBottom: 20 }}><h2 style={{ margin: 0, fontSize: 20, color: "#E0E0E4" }}>Proposal Generator</h2><p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B6B73" }}>AI-crafted proposals via Claude API</p></div>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ margin: 0, fontSize: 20, color: "#E0E0E4" }}>Rapid Apply</h2>
+        <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B6B73" }}>Click job → auto-generate → auto-copy → auto-open → paste & submit</p>
+      </div>
+      {autoStatus && (
+        <div style={{ background: "#C8FF3215", border: "1px solid #C8FF3240", borderRadius: 8, padding: "10px 16px", marginBottom: 16, display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ color: "#C8FF32", fontSize: 13, fontWeight: 600 }}>{autoStatus}</span>
+        </div>
+      )}
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-          <div><h3 style={{ margin: 0, fontSize: 16, color: "#E0E0E4" }}>{job.title}</h3><div style={{ fontSize: 13, color: "#6B6B73", marginTop: 4 }}>{job.client} • {job.source} • {job.budget}</div></div>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16, color: "#E0E0E4" }}>{job.title}</h3>
+            <div style={{ fontSize: 13, color: "#6B6B73", marginTop: 4 }}>{job.client} • {job.source} • {job.budget}</div>
+          </div>
           <ScoreBadge score={job.score} />
         </div>
         <p style={{ color: "#A0A0A8", fontSize: 13, lineHeight: 1.6, margin: "8px 0" }}>{job.description}</p>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>{(job.skills || []).map(s => <Badge key={s} color="#3B82F6">{s}</Badge>)}</div>
       </Card>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <Button onClick={generate} disabled={generating}>{generating ? "⏳ Generating..." : "✨ Generate Proposal"}</Button>
-        {proposal && <><Button variant="secondary" onClick={copyProposal}>{copied ? "✓ Copied!" : "📋 Copy"}</Button><Button variant="secondary" onClick={addToPipeline} disabled={added}>{added ? "✓ Added" : "📌 Add to Pipeline"}</Button></>}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <Button onClick={() => generate(false)} disabled={generating}>{generating ? "⏳ Generating..." : "⟳ Regenerate"}</Button>
+        {proposal && <>
+          <Button variant="secondary" onClick={copyProposal}>{copied ? "✓ Copied!" : "📋 Copy"}</Button>
+          {job.url && <Button variant="secondary" onClick={openJob}>↗ Open Job Listing</Button>}
+          <Button variant="secondary" onClick={() => { copyProposal(); if (job.url) setTimeout(() => window.open(job.url, '_blank'), 200); }} style={{ background: "#C8FF3220", color: "#C8FF32", border: "1px solid #C8FF3240" }}>⚡ Copy + Open</Button>
+          {!added && <Button variant="secondary" onClick={async () => { try { await api.createClient({ name: job.client || "Unknown", project: job.title, stage: "proposal_sent", budget: job.est_value || 0, requirements: job.description, proposal, job_id: job.id }); setAdded(true); } catch(e){} }}>📌 Add to Pipeline</Button>}
+          {added && <Badge color="#10B981" size="md">✓ In Pipeline</Badge>}
+        </>}
       </div>
       {proposal && <Card><TextArea value={proposal} onChange={setProposal} rows={16} style={{ border: "none", background: "transparent", padding: 0 }} /></Card>}
     </div>
