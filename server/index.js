@@ -55,8 +55,18 @@ if (existsSync(distPath)) {
   });
 }
 
-// ─── Cron: Scrape feeds every 6 hours ───────────────────
-cron.schedule('0 */6 * * *', async () => {
+// ─── Auto-scrape on boot ────────────────────────────────
+(async () => {
+  try {
+    console.log('[BOOT] Auto-scraping all feeds...');
+    const results = await scrapeAllFeeds();
+    const total = results.reduce((s, r) => s + r.imported, 0);
+    console.log(`[BOOT] Imported ${total} jobs from ${results.length} feeds`);
+  } catch (e) { console.error('[BOOT] Feed scrape failed:', e.message); }
+})();
+
+// ─── Cron: Scrape feeds every 30 minutes ────────────────
+cron.schedule('*/30 * * * *', async () => {
   console.log('[CRON] Scraping all feeds...');
   const results = await scrapeAllFeeds();
   console.log('[CRON] Feed scrape complete:', results);

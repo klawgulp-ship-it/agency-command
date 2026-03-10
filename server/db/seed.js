@@ -20,6 +20,23 @@ for (const j of jobs) {
   insertJob.run(uuid(), j.title, j.source, j.budget, j.client, JSON.stringify(j.skills), j.score, j.est_value, j.est_time, j.description, j.posted_at);
 }
 
+// Pre-load RSS feeds — no accounts needed, these are public
+const insertFeed = db.prepare('INSERT OR IGNORE INTO feeds (id, url, source, active) VALUES (?, ?, ?, 1)');
+const feeds = [
+  // Upwork RSS feeds by skill (public, no login required)
+  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=react+typescript&sort=recency', source: 'Upwork' },
+  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=node.js+express+api&sort=recency', source: 'Upwork' },
+  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=full+stack+web+app&sort=recency', source: 'Upwork' },
+  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=next.js+typescript&sort=recency', source: 'Upwork' },
+  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=solana+web3+frontend&sort=recency', source: 'Upwork' },
+  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=stripe+payment+integration&sort=recency', source: 'Upwork' },
+  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=dashboard+react&sort=recency', source: 'Upwork' },
+  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=ai+integration+chatbot&sort=recency', source: 'Upwork' },
+];
+for (const f of feeds) {
+  insertFeed.run(uuid(), f.url, f.source);
+}
+
 // Default settings
 const upsertSetting = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
 upsertSetting.run('snipelink_base', 'https://snipelink.io/pay/');
