@@ -76,6 +76,17 @@ db.exec(`
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT DEFAULT '',
+    data TEXT DEFAULT '{}',
+    read INTEGER DEFAULT 0,
+    action_url TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  );
 `);
 
 export default db;

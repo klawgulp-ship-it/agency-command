@@ -52,4 +52,10 @@ export const api = {
   // Agent
   runAgent: () => request('/agent/run', { method: 'POST' }),
   getAgentStats: () => request('/agent/stats'),
+
+  // Notifications
+  getNotifications: (unread) => request(`/notifications${unread ? '?unread=true' : ''}`),
+  getUnreadCount: () => request('/notifications/count'),
+  markRead: (id) => request(`/notifications/${id}/read`, { method: 'POST' }),
+  markAllRead: () => request('/notifications/read-all', { method: 'POST' }),
 };

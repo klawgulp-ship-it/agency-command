@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { api } from "./api.js";
 
 const PIPELINE_STAGES = [
@@ -535,11 +535,11 @@ function AgentDashboard() {
 
       {stats && (
         <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+          <StatCard label="Revenue" value={`$${(stats.totalRevenue || 0).toLocaleString()}`} accent="#10B981" />
+          <StatCard label="Pending" value={`$${(stats.pendingRevenue || 0).toLocaleString()}`} accent="#F59E0B" />
           <StatCard label="Jobs Found" value={stats.totalJobs} />
-          <StatCard label="High Score (70+)" value={stats.highScoreJobs} accent="#10B981" />
-          <StatCard label="Proposals Ready" value={stats.proposalsReady} accent="#8B5CF6" />
-          <StatCard label="In Pipeline" value={stats.totalClients} accent="#3B82F6" />
-          <StatCard label="Active Feeds" value={stats.activeFeeds} accent="#F59E0B" />
+          <StatCard label="Score 70+" value={stats.highScoreJobs} accent="#8B5CF6" />
+          <StatCard label="Proposals" value={stats.proposalsReady} accent="#3B82F6" />
         </div>
       )}
 
@@ -563,6 +563,26 @@ function AgentDashboard() {
         </div>
       </Card>
 
+      {stats?.needsAction?.length > 0 && (
+        <Card style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: "#C8FF32", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 10, fontWeight: 700 }}>Ready to send — proposals queued</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {stats.needsAction.map(c => (
+              <div key={c.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#0A0A0B", borderRadius: 6, border: "1px solid #1E1E22" }}>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#E0E0E4" }}>{c.project}</div>
+                  <div style={{ fontSize: 11, color: "#6B6B73" }}>{c.name} • ${(c.budget || 0).toLocaleString()}</div>
+                </div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {c.job_url && <Button size="sm" onClick={() => { navigator.clipboard.writeText(c.proposal || ''); setTimeout(() => window.open(c.job_url, '_blank'), 200); }} style={{ background: "#C8FF3220", color: "#C8FF32", border: "1px solid #C8FF3240" }}>⚡ Copy + Open</Button>}
+                  <Button size="sm" variant="secondary" onClick={() => navigator.clipboard.writeText(c.proposal || '')}>📋 Copy</Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {lastRun && (
         <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
           <StatCard label="Jobs Scraped" value={lastRun.jobsScraped || 0} accent="#3B82F6" />
@@ -584,10 +604,67 @@ function AgentDashboard() {
   );
 }
 
+// ─── Toast Notifications ─────────────────────────────────
+function ToastContainer({ toasts, onDismiss }) {
+  return (
+    <div style={{ position: "fixed", top: 16, right: 16, zIndex: 9999, display: "flex", flexDirection: "column", gap: 8, maxWidth: 380 }}>
+      {toasts.map(t => (
+        <div key={t.id} onClick={() => onDismiss(t.id)} style={{
+          background: t.type === "hot_lead" ? "#C8FF3215" : t.type === "proposal_ready" ? "#8B5CF615" : t.type === "invoice" ? "#10B98115" : "#1E1E22",
+          border: `1px solid ${t.type === "hot_lead" ? "#C8FF3240" : t.type === "proposal_ready" ? "#8B5CF640" : t.type === "invoice" ? "#10B98140" : "#2A2A2E"}`,
+          borderRadius: 10, padding: "12px 16px", cursor: "pointer", animation: "slideIn 0.3s ease",
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#E0E0E4", marginBottom: 2 }}>{t.title}</div>
+          <div style={{ fontSize: 12, color: "#A0A0A8" }}>{t.message}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ─── Main App ────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab] = useState("jobs");
+  const [tab, setTab] = useState("agent");
   const [selectedJob, setSelectedJob] = useState(null);
+  const [toasts, setToasts] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifs, setShowNotifs] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  // SSE — real-time notifications
+  useEffect(() => {
+    const es = new EventSource("/api/notifications/stream");
+    es.onmessage = (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        if (data.type === "connected") return;
+        // Show toast
+        setToasts(prev => [...prev, { ...data, id: data.id || Date.now() }]);
+        setUnreadCount(prev => prev + 1);
+        // Auto-dismiss toast after 6s
+        setTimeout(() => setToasts(prev => prev.filter(t => t.id !== data.id)), 6000);
+      } catch (err) {}
+    };
+    // Load initial unread count
+    api.getUnreadCount().then(r => setUnreadCount(r.count)).catch(() => {});
+    return () => es.close();
+  }, []);
+
+  const dismissToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
+
+  const toggleNotifs = async () => {
+    if (!showNotifs) {
+      const notifs = await api.getNotifications();
+      setNotifications(notifs);
+    }
+    setShowNotifs(!showNotifs);
+  };
+
+  const markAllRead = async () => {
+    await api.markAllRead();
+    setUnreadCount(0);
+    setNotifications(prev => prev.map(n => ({ ...n, read: 1 })));
+  };
 
   const tabs = [
     { id: "agent", label: "Agent", icon: "⚡" },
@@ -600,18 +677,41 @@ export default function App() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#0A0A0B", color: "#E0E0E4", fontFamily: "'DM Sans', sans-serif" }}>
+      <style>{`@keyframes slideIn { from { opacity: 0; transform: translateX(100px); } to { opacity: 1; transform: translateX(0); } }`}</style>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+      <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <div style={{ borderBottom: "1px solid #1E1E22", padding: "12px 24px", display: "flex", justifyContent: "space-between", alignItems: "center", position: "sticky", top: 0, background: "#0A0A0B", zIndex: 100 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           <div style={{ width: 32, height: 32, borderRadius: 6, background: "linear-gradient(135deg, #C8FF32, #8BDB00)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, fontWeight: 700, color: "#0A0A0B" }}>⚡</div>
           <div><div style={{ fontSize: 15, fontWeight: 700, letterSpacing: "-0.01em" }}>Agency Command</div><div style={{ fontSize: 10, color: "#6B6B73", fontFamily: "'Space Mono', monospace" }}>CLAUDE CODE × FREELANCE</div></div>
         </div>
-        <div style={{ display: "flex", gap: 2 }}>
+        <div style={{ display: "flex", gap: 2, alignItems: "center" }}>
           {tabs.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)} style={{ background: tab === t.id ? "#1E1E22" : "transparent", border: tab === t.id ? "1px solid #2A2A2E" : "1px solid transparent", borderRadius: 6, padding: "6px 14px", color: tab === t.id ? "#C8FF32" : "#6B6B73", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s ease", display: "flex", alignItems: "center", gap: 6 }}>
               <span>{t.icon}</span><span>{t.label}</span>
             </button>
           ))}
+          <div style={{ position: "relative", marginLeft: 8 }}>
+            <button onClick={toggleNotifs} style={{ background: showNotifs ? "#1E1E22" : "transparent", border: "1px solid #2A2A2E", borderRadius: 6, padding: "6px 10px", cursor: "pointer", color: "#E0E0E4", fontSize: 14, position: "relative" }}>
+              🔔
+              {unreadCount > 0 && <span style={{ position: "absolute", top: -4, right: -4, background: "#EF4444", color: "#fff", fontSize: 10, fontWeight: 700, borderRadius: "50%", width: 18, height: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>{unreadCount}</span>}
+            </button>
+            {showNotifs && (
+              <div style={{ position: "absolute", top: "100%", right: 0, marginTop: 8, width: 360, maxHeight: 400, overflow: "auto", background: "#141416", border: "1px solid #2A2A2E", borderRadius: 10, zIndex: 200 }}>
+                <div style={{ padding: "10px 14px", borderBottom: "1px solid #1E1E22", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#E0E0E4" }}>Notifications</span>
+                  {unreadCount > 0 && <button onClick={markAllRead} style={{ background: "none", border: "none", color: "#C8FF32", fontSize: 11, cursor: "pointer", fontWeight: 600 }}>Mark all read</button>}
+                </div>
+                {notifications.length === 0 && <div style={{ padding: 20, textAlign: "center", color: "#6B6B73", fontSize: 13 }}>No notifications yet</div>}
+                {notifications.map(n => (
+                  <div key={n.id} onClick={() => { if (n.action_url) window.open(n.action_url, '_blank'); api.markRead(n.id); setUnreadCount(prev => Math.max(0, prev - 1)); }} style={{ padding: "10px 14px", borderBottom: "1px solid #1E1E2210", cursor: n.action_url ? "pointer" : "default", background: n.read ? "transparent" : "#C8FF3208" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: n.read ? "#6B6B73" : "#E0E0E4" }}>{n.title}</div>
+                    <div style={{ fontSize: 11, color: "#6B6B73", marginTop: 2 }}>{n.message}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "24px 20px" }}>
