@@ -16,6 +16,7 @@ import agentRouter from './routes/agent.js';
 import notificationsRouter from './routes/notifications.js';
 import inboundRouter from './routes/inbound.js';
 import webhooksRouter from './routes/webhooks.js';
+import referralsRouter from './routes/referrals.js';
 import { scrapeAllFeeds } from './services/feedScraper.js';
 import { runAutoAgent } from './services/autoAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
@@ -52,6 +53,7 @@ app.use('/api/agent', agentRouter);
 app.use('/api/notifications', notificationsRouter);
 app.use('/api/inbound', inboundRouter);
 app.use('/api/webhooks', webhooksRouter);
+app.use('/api/referrals', referralsRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {

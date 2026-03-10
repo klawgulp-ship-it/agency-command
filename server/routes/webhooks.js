@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import crypto from 'crypto';
+import { v4 as uuid } from 'uuid';
 import db from '../db/connection.js';
 import { notify } from '../services/notifications.js';
 
@@ -81,6 +82,30 @@ router.post('/snipelink', (req, res) => {
     { invoiceId: invoice.id, clientId: invoice.client_id, paymentId: payment_id, amount },
     ''
   );
+
+  // ─── Referral Commission ───
+  const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(invoice.client_id);
+  if (client && client.referrer_code) {
+    const referrer = db.prepare('SELECT * FROM referrers WHERE code = ?').get(client.referrer_code);
+    if (referrer) {
+      const commission = Math.round(amount * referrer.commission_rate * 100) / 100;
+      db.prepare('UPDATE referrers SET total_earned = total_earned + ? WHERE id = ?').run(commission, referrer.id);
+      db.prepare(`
+        INSERT INTO referral_events (id, referrer_id, type, client_id, amount, commission, note)
+        VALUES (?, ?, 'commission', ?, ?, ?, ?)
+      `).run(uuid(), referrer.id, client.id, amount, commission,
+        `${referrer.commission_rate * 100}% commission on $${amount} from ${client.name}`);
+
+      notify(
+        'referral_commission',
+        `Referral commission: $${commission}`,
+        `${referrer.name} earned $${commission} (${referrer.commission_rate * 100}%) from ${client.name}'s payment of $${amount}.`,
+        { referrerId: referrer.id, clientId: client.id, commission },
+        ''
+      );
+      console.log(`[WEBHOOK] Referral commission: $${commission} to ${referrer.name} (${referrer.code})`);
+    }
+  }
 
   console.log(`[WEBHOOK] Invoice ${invoice.id} marked paid — $${amount} from ${customer_name || customer_email}`);
 

@@ -21,25 +21,42 @@ router.post('/lead', async (req, res) => {
   // Allow CORS from portfolio site
   res.setHeader('Access-Control-Allow-Origin', '*');
 
-  const { name, email, project_type, budget, description } = req.body;
+  const { name, email, project_type, budget, description, ref } = req.body;
   if (!name || !email) return res.status(400).json({ error: 'name and email required' });
 
   const clientId = uuid();
   const budgetValue = BUDGET_MAP[budget] || 2000;
   const depositAmount = Math.round(budgetValue * 0.5);
 
+  // Look up referrer if ref code provided
+  let referrer = null;
+  if (ref) {
+    referrer = db.prepare('SELECT * FROM referrers WHERE code = ?').get(ref);
+  }
+
   // Create client in pipeline as "lead"
+  const source = referrer ? `Portfolio Site (ref: ${ref})` : 'Portfolio Site';
   db.prepare(`
-    INSERT INTO clients (id, name, project, stage, budget, requirements, notes, created_at, updated_at)
-    VALUES (?, ?, ?, 'lead', ?, ?, ?, datetime('now'), datetime('now'))
+    INSERT INTO clients (id, name, project, stage, budget, requirements, notes, referrer_code, created_at, updated_at)
+    VALUES (?, ?, ?, 'lead', ?, ?, ?, ?, datetime('now'), datetime('now'))
   `).run(
     clientId,
     name,
     project_type || 'Project',
     budgetValue,
     description || '',
-    `Email: ${email}\nBudget: ${budget}\nProject Type: ${project_type}\nSource: Portfolio Site`
+    `Email: ${email}\nBudget: ${budget}\nProject Type: ${project_type}\nSource: ${source}`,
+    ref || ''
   );
+
+  // Track referral conversion
+  if (referrer) {
+    db.prepare('UPDATE referrers SET total_referrals = total_referrals + 1 WHERE id = ?').run(referrer.id);
+    db.prepare(`
+      INSERT INTO referral_events (id, referrer_id, type, client_id, note)
+      VALUES (?, ?, 'referral', ?, ?)
+    `).run(uuid(), referrer.id, clientId, `Referred ${name} — ${project_type} — ${budget}`);
+  }
 
   // Auto-generate deposit invoice with SnipeLink
   const invoiceId = uuid();

@@ -89,7 +89,37 @@ db.exec(`
   );
 `);
 
-// Safe migration: add payment_ref to invoices if missing
+// Safe migrations
 try { db.exec("ALTER TABLE invoices ADD COLUMN payment_ref TEXT DEFAULT ''"); } catch (e) { /* already exists */ }
+try { db.exec("ALTER TABLE clients ADD COLUMN referrer_code TEXT DEFAULT ''"); } catch (e) { /* already exists */ }
+
+// Referrals table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS referrers (
+    id TEXT PRIMARY KEY,
+    code TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    payout_method TEXT DEFAULT '',
+    commission_rate REAL DEFAULT 0.10,
+    total_clicks INTEGER DEFAULT 0,
+    total_referrals INTEGER DEFAULT 0,
+    total_earned REAL DEFAULT 0,
+    total_paid REAL DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now'))
+  );
+
+  CREATE TABLE IF NOT EXISTS referral_events (
+    id TEXT PRIMARY KEY,
+    referrer_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    client_id TEXT,
+    amount REAL DEFAULT 0,
+    commission REAL DEFAULT 0,
+    note TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (referrer_id) REFERENCES referrers(id)
+  );
+`);
 
 export default db;
