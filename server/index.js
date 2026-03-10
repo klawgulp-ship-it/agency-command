@@ -12,7 +12,9 @@ import feedsRouter from './routes/feeds.js';
 import proposalsRouter from './routes/proposals.js';
 import settingsRouter from './routes/settings.js';
 import statsRouter from './routes/stats.js';
+import agentRouter from './routes/agent.js';
 import { scrapeAllFeeds } from './services/feedScraper.js';
+import { runAutoAgent } from './services/autoAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 
 // Run seed on first boot if DB is empty
@@ -41,6 +43,7 @@ app.use('/api/feeds', feedsRouter);
 app.use('/api/proposals', proposalsRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/stats', statsRouter);
+app.use('/api/agent', agentRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -58,21 +61,22 @@ if (existsSync(distPath)) {
   });
 }
 
-// ─── Auto-scrape on boot ────────────────────────────────
+// ─── Auto-agent on boot — scrape + generate proposals ───
 (async () => {
   try {
-    console.log('[BOOT] Auto-scraping all feeds...');
-    const results = await scrapeAllFeeds();
-    const total = results.reduce((s, r) => s + r.imported, 0);
-    console.log(`[BOOT] Imported ${total} jobs from ${results.length} feeds`);
-  } catch (e) { console.error('[BOOT] Feed scrape failed:', e.message); }
+    console.log('[BOOT] Running auto-agent...');
+    const result = await runAutoAgent();
+    result.log.forEach(l => console.log(l));
+  } catch (e) { console.error('[BOOT] Auto-agent failed:', e.message); }
 })();
 
-// ─── Cron: Scrape feeds every 30 minutes ────────────────
-cron.schedule('*/30 * * * *', async () => {
-  console.log('[CRON] Scraping all feeds...');
-  const results = await scrapeAllFeeds();
-  console.log('[CRON] Feed scrape complete:', results);
+// ─── Cron: Run auto-agent every 15 minutes ──────────────
+cron.schedule('*/15 * * * *', async () => {
+  console.log('[CRON] Running auto-agent...');
+  try {
+    const result = await runAutoAgent();
+    console.log(`[CRON] Agent done: ${result.jobsScraped} scraped, ${result.proposalsGenerated} proposals`);
+  } catch (e) { console.error('[CRON] Auto-agent failed:', e.message); }
 });
 
 // ─── Cron: Check overdue invoices daily at 9am ──────────

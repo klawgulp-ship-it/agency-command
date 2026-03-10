@@ -8,10 +8,12 @@ const insertFeed = db.prepare('INSERT OR IGNORE INTO feeds (id, url, source, act
 const feeds = [
   // RemoteOK — 99+ remote dev jobs, direct apply links, free
   { url: 'https://remoteok.com/remote-dev-jobs.rss', source: 'RemoteOK' },
-  // Hacker News "Who is Hiring" — high quality, direct links
+  // Hacker News "Who is Hiring" — high quality startup jobs, direct links
   { url: 'https://hnrss.org/whoishiring/jobs', source: 'HN Jobs' },
   // Dribbble — design + frontend + UI/UX jobs, direct links
   { url: 'https://dribbble.com/jobs.rss', source: 'Dribbble' },
+  // Remotive — curated remote dev jobs, direct apply
+  { url: 'https://remotive.com/remote-jobs/feed', source: 'Remotive' },
 ];
 for (const f of feeds) {
   insertFeed.run(uuid(), f.url, f.source);

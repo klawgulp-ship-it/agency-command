@@ -48,4 +48,8 @@ export const api = {
 
   // Stats
   getStats: () => request('/stats'),
+
+  // Agent
+  runAgent: () => request('/agent/run', { method: 'POST' }),
+  getAgentStats: () => request('/agent/stats'),
 };

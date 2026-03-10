@@ -151,7 +151,7 @@ function JobMonitor({ onSelectJob }) {
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <Input value={search} onChange={setSearch} placeholder="Search jobs or skills..." style={{ flex: 1, minWidth: 200 }} />
-        {["all", "RemoteOK", "HN Jobs", "Dribbble"].map(f => (
+        {["all", "RemoteOK", "HN Jobs", "Dribbble", "Remotive"].map(f => (
           <Button key={f} variant={filter === f ? "primary" : "secondary"} size="sm" onClick={() => setFilter(f)}>{f === "all" ? "All Sources" : f}</Button>
         ))}
       </div>
@@ -499,12 +499,98 @@ function Invoices() {
   );
 }
 
+// ─── Tab: Agent Dashboard ───────────────────────────────
+function AgentDashboard() {
+  const [stats, setStats] = useState(null);
+  const [running, setRunning] = useState(false);
+  const [log, setLog] = useState([]);
+  const [lastRun, setLastRun] = useState(null);
+
+  const loadStats = async () => {
+    try { setStats(await api.getAgentStats()); } catch (e) {}
+  };
+  useEffect(() => { loadStats(); }, []);
+
+  const runAgent = async () => {
+    setRunning(true);
+    setLog(["[AGENT] Starting..."]);
+    try {
+      const result = await api.runAgent();
+      setLog(result.log || []);
+      setLastRun(result);
+      loadStats();
+    } catch (e) { setLog(["[ERROR] " + e.message]); }
+    setRunning(false);
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, color: "#E0E0E4" }}>AI Agent</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B6B73" }}>Autonomous job hunter — scrapes, scores, generates proposals 24/7</p>
+        </div>
+        <Button onClick={runAgent} disabled={running}>{running ? "⏳ Agent Running..." : "⚡ Run Agent Now"}</Button>
+      </div>
+
+      {stats && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+          <StatCard label="Jobs Found" value={stats.totalJobs} />
+          <StatCard label="High Score (70+)" value={stats.highScoreJobs} accent="#10B981" />
+          <StatCard label="Proposals Ready" value={stats.proposalsReady} accent="#8B5CF6" />
+          <StatCard label="In Pipeline" value={stats.totalClients} accent="#3B82F6" />
+          <StatCard label="Active Feeds" value={stats.activeFeeds} accent="#F59E0B" />
+        </div>
+      )}
+
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>How it works</div>
+        <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+          {[
+            { step: "1", title: "Scrape", desc: "Pulls fresh jobs from all feeds every 15 min" },
+            { step: "2", title: "Score", desc: "AI ranks jobs by skill match, budget, recency" },
+            { step: "3", title: "Generate", desc: "Auto-writes proposals for top matches (70+)" },
+            { step: "4", title: "Queue", desc: "Proposals land in Pipeline ready to send" },
+          ].map(s => (
+            <div key={s.step} style={{ flex: 1, minWidth: 140 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                <div style={{ width: 24, height: 24, borderRadius: "50%", background: "#C8FF3220", color: "#C8FF32", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700 }}>{s.step}</div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#E0E0E4" }}>{s.title}</span>
+              </div>
+              <div style={{ fontSize: 12, color: "#6B6B73", paddingLeft: 32 }}>{s.desc}</div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {lastRun && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <StatCard label="Jobs Scraped" value={lastRun.jobsScraped || 0} accent="#3B82F6" />
+          <StatCard label="Proposals Generated" value={lastRun.proposalsGenerated || 0} accent="#C8FF32" />
+        </div>
+      )}
+
+      {log.length > 0 && (
+        <Card style={{ background: "#0A0A0B" }}>
+          <div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Agent Log</div>
+          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, lineHeight: 1.8 }}>
+            {log.map((line, i) => (
+              <div key={i} style={{ color: line.includes("✓") ? "#C8FF32" : line.includes("✗") || line.includes("ERROR") ? "#EF4444" : "#A0A0A8" }}>{line}</div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // ─── Main App ────────────────────────────────────────────
 export default function App() {
   const [tab, setTab] = useState("jobs");
   const [selectedJob, setSelectedJob] = useState(null);
 
   const tabs = [
+    { id: "agent", label: "Agent", icon: "⚡" },
     { id: "jobs", label: "Job Monitor", icon: "📡" },
     { id: "proposal", label: "Proposals", icon: "📝" },
     { id: "pipeline", label: "Pipeline", icon: "🔄" },
@@ -529,6 +615,7 @@ export default function App() {
         </div>
       </div>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "24px 20px" }}>
+        {tab === "agent" && <AgentDashboard />}
         {tab === "jobs" && <JobMonitor onSelectJob={job => { setSelectedJob(job); setTab("proposal"); }} />}
         {tab === "proposal" && <ProposalGenerator job={selectedJob} />}
         {tab === "pipeline" && <ClientPipeline />}
