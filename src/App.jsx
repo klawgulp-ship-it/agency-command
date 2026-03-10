@@ -513,16 +513,33 @@ function AgentDashboard() {
 
   const runAgent = async () => {
     setRunning(true);
-    setLog(["[AGENT] Starting... scraping feeds + generating proposals (this takes 30-60s)"]);
+    setLog(["[AGENT] Starting... scraping feeds + generating proposals"]);
     try {
-      const result = await api.runAgent();
-      setLog(result.log || ["[AGENT] Complete"]);
-      setLastRun(result);
-      loadStats();
+      await api.runAgent();
+      // Poll for completion
+      const poll = setInterval(async () => {
+        try {
+          const status = await api.getAgentStatus();
+          if (!status.running && status.result) {
+            clearInterval(poll);
+            setLog(status.result.log || ["[AGENT] Complete"]);
+            setLastRun(status.result);
+            loadStats();
+            setRunning(false);
+          } else if (!status.running) {
+            clearInterval(poll);
+            setLog(["[AGENT] Complete — refresh to see results"]);
+            loadStats();
+            setRunning(false);
+          }
+        } catch (e) {}
+      }, 3000);
+      // Safety timeout after 2 min
+      setTimeout(() => { clearInterval(poll); setRunning(false); loadStats(); }, 120000);
     } catch (e) {
-      setLog(["[ERROR] " + (e.message || "Request timed out — agent may still be running on server. Refresh to see results.")]);
+      setLog(["[ERROR] " + e.message]);
+      setRunning(false);
     }
-    setRunning(false);
   };
 
   return (

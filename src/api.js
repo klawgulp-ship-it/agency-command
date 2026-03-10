@@ -49,8 +49,9 @@ export const api = {
   // Stats
   getStats: () => request('/stats'),
 
-  // Agent (long timeout — scraping + AI generation takes time)
-  runAgent: () => fetch('/api/agent/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(120000) }).then(r => r.json()),
+  // Agent
+  runAgent: () => request('/agent/run', { method: 'POST' }),
+  getAgentStatus: () => request('/agent/status'),
   getAgentStats: () => request('/agent/stats'),
 
   // Notifications

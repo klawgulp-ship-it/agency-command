@@ -1,7 +1,7 @@
 import Parser from 'rss-parser';
 import { v4 as uuid } from 'uuid';
 import db from '../db/connection.js';
-import { scoreJob, estimateValue, estimateTime } from './scorer.js';
+import { scoreJob, estimateValue, estimateTime, estimateFromContext } from './scorer.js';
 
 const parser = new Parser({
   timeout: 15000,
@@ -120,19 +120,25 @@ export async function scrapeFeed(feedUrl, source = 'Custom') {
 
       const skills = extractSkills(fullText);
       const budget = extractBudget(fullText);
-      const estValue = estimateValue(budget);
+      let estValue = estimateValue(budget);
+
+      // Smart estimate when no budget in listing
+      if (!estValue) {
+        const ctx = estimateFromContext(title, description);
+        estValue = Math.round((ctx.min + ctx.max) / 2);
+      }
 
       const job = {
         id: uuid(),
         title,
         source,
         client: item.creator || item.author || item['dc:creator'] || '',
-        budget,
+        budget: budget || '',
         description,
         url: item.link || '',
         skills: JSON.stringify(skills),
-        est_value: estValue || 1000,
-        est_time: estimateTime(estValue || 1000),
+        est_value: estValue,
+        est_time: estimateTime(estValue),
         posted_at: timeAgo(item.pubDate || item.isoDate),
       };
 
