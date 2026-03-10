@@ -90,7 +90,7 @@ Write a 3-4 paragraph response that:
 4. Mentions the 50/50 payment structure (50% deposit to start, 50% on delivery)
 5. Ends with next steps (you'll follow up within 24h)
 
-Keep it under 200 words. Professional but human. Sign off as "crypt.dev team".`
+Keep it under 200 words. Professional but human. Sign off as "SnipeLink LLC".`
           }],
         }),
       });
