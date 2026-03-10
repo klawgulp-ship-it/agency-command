@@ -89,4 +89,7 @@ db.exec(`
   );
 `);
 
+// Safe migration: add payment_ref to invoices if missing
+try { db.exec("ALTER TABLE invoices ADD COLUMN payment_ref TEXT DEFAULT ''"); } catch (e) { /* already exists */ }
+
 export default db;

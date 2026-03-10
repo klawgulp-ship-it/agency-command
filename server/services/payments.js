@@ -7,8 +7,10 @@ function getSnipeLinkBase() {
 
 export function generatePaymentLink(invoice) {
   const base = getSnipeLinkBase();
-  // Generate a unique payment reference
+  // Generate a unique payment reference and store it for webhook matching
   const ref = `${invoice.client_id.slice(0, 8)}-${Date.now().toString(36)}`;
+  // Save payment_ref on the invoice for webhook lookup
+  db.prepare("UPDATE invoices SET payment_ref = ? WHERE id = ?").run(ref, invoice.id);
   return `${base}${ref}?amount=${invoice.amount}&project=${encodeURIComponent(invoice.project)}&type=${invoice.type}`;
 }
 
