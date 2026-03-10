@@ -151,7 +151,7 @@ function JobMonitor({ onSelectJob }) {
 
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <Input value={search} onChange={setSearch} placeholder="Search jobs or skills..." style={{ flex: 1, minWidth: 200 }} />
-        {["all", "WeWorkRemotely", "RemoteOK"].map(f => (
+        {["all", "RemoteOK", "HN Jobs", "Dribbble"].map(f => (
           <Button key={f} variant={filter === f ? "primary" : "secondary"} size="sm" onClick={() => setFilter(f)}>{f === "all" ? "All Sources" : f}</Button>
         ))}
       </div>

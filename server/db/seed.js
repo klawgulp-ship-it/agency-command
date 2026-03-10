@@ -3,15 +3,15 @@ import { v4 as uuid } from 'uuid';
 
 console.log('Seeding database...');
 
-// Pre-load RSS feeds — real, working public job board feeds
+// Pre-load RSS feeds — free job boards, no account/payment needed
 const insertFeed = db.prepare('INSERT OR IGNORE INTO feeds (id, url, source, active) VALUES (?, ?, ?, 1)');
 const feeds = [
-  // WeWorkRemotely — active RSS feeds with real job links
-  { url: 'https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss', source: 'WeWorkRemotely' },
-  { url: 'https://weworkremotely.com/categories/remote-front-end-programming-jobs.rss', source: 'WeWorkRemotely' },
-  { url: 'https://weworkremotely.com/categories/remote-back-end-programming-jobs.rss', source: 'WeWorkRemotely' },
-  // RemoteOK — large feed of remote dev jobs
+  // RemoteOK — 99+ remote dev jobs, direct apply links, free
   { url: 'https://remoteok.com/remote-dev-jobs.rss', source: 'RemoteOK' },
+  // Hacker News "Who is Hiring" — high quality, direct links
+  { url: 'https://hnrss.org/whoishiring/jobs', source: 'HN Jobs' },
+  // Dribbble — design + frontend + UI/UX jobs, direct links
+  { url: 'https://dribbble.com/jobs.rss', source: 'Dribbble' },
 ];
 for (const f of feeds) {
   insertFeed.run(uuid(), f.url, f.source);
