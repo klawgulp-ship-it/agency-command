@@ -3,35 +3,15 @@ import { v4 as uuid } from 'uuid';
 
 console.log('Seeding database...');
 
-const jobs = [
-  { title: "React Dashboard for SaaS Analytics Platform", source: "Upwork", budget: "$3,000-5,000", client: "TechMetrics Inc.", skills: ["React","TypeScript","Node.js","Dashboards"], score: 95, est_value: 4000, est_time: "5-7 days", description: "Need experienced React developer to build an analytics dashboard with real-time charts, user management, and data export features. Must have experience with TypeScript and modern React patterns.", posted_at: "2h ago" },
-  { title: "Stripe Payment Integration for Marketplace", source: "Upwork", budget: "$1,500-2,500", client: "MarketHub", skills: ["Stripe","Node.js","Payment Integration","Express"], score: 92, est_value: 2000, est_time: "3-4 days", description: "Looking for a payment specialist to integrate Stripe Connect into our multi-vendor marketplace. Needs escrow, split payments, and webhook handling.", posted_at: "4h ago" },
-  { title: "Full-Stack Web App - Inventory Management", source: "LinkedIn", budget: "$4,000-7,000", client: "RetailOps LLC", skills: ["React","TypeScript","Express","PostgreSQL","Web Apps"], score: 90, est_value: 5500, est_time: "7-10 days", description: "Building an inventory management system for a mid-size retailer. Need CRUD operations, barcode scanning, reporting, and role-based access.", posted_at: "6h ago" },
-  { title: "Landing Page with A/B Testing", source: "Fiverr", budget: "$600-1,000", client: "AIStartup.io", skills: ["React","Landing Pages","TypeScript"], score: 85, est_value: 800, est_time: "1-2 days", description: "Need a high-converting landing page for our AI product launch. Must include A/B testing setup, analytics integration, and mobile optimization.", posted_at: "1d ago" },
-  { title: "Solana NFT Marketplace Frontend", source: "Upwork", budget: "$5,000-8,000", client: "SolSpace", skills: ["React","TypeScript","Solana/Web3","Web Apps"], score: 88, est_value: 6500, est_time: "8-12 days", description: "Need a frontend developer experienced with Solana to build an NFT marketplace UI. Wallet connection, listing/bidding, and collection pages.", posted_at: "3h ago" },
-];
-
-const insertJob = db.prepare(`
-  INSERT OR IGNORE INTO jobs (id, title, source, budget, client, skills, score, est_value, est_time, description, posted_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-`);
-
-for (const j of jobs) {
-  insertJob.run(uuid(), j.title, j.source, j.budget, j.client, JSON.stringify(j.skills), j.score, j.est_value, j.est_time, j.description, j.posted_at);
-}
-
-// Pre-load RSS feeds — no accounts needed, these are public
+// Pre-load RSS feeds — real, working public job board feeds
 const insertFeed = db.prepare('INSERT OR IGNORE INTO feeds (id, url, source, active) VALUES (?, ?, ?, 1)');
 const feeds = [
-  // Upwork RSS feeds by skill (public, no login required)
-  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=react+typescript&sort=recency', source: 'Upwork' },
-  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=node.js+express+api&sort=recency', source: 'Upwork' },
-  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=full+stack+web+app&sort=recency', source: 'Upwork' },
-  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=next.js+typescript&sort=recency', source: 'Upwork' },
-  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=solana+web3+frontend&sort=recency', source: 'Upwork' },
-  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=stripe+payment+integration&sort=recency', source: 'Upwork' },
-  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=dashboard+react&sort=recency', source: 'Upwork' },
-  { url: 'https://www.upwork.com/ab/feed/jobs/rss?q=ai+integration+chatbot&sort=recency', source: 'Upwork' },
+  // WeWorkRemotely — active RSS feeds with real job links
+  { url: 'https://weworkremotely.com/categories/remote-full-stack-programming-jobs.rss', source: 'WeWorkRemotely' },
+  { url: 'https://weworkremotely.com/categories/remote-front-end-programming-jobs.rss', source: 'WeWorkRemotely' },
+  { url: 'https://weworkremotely.com/categories/remote-back-end-programming-jobs.rss', source: 'WeWorkRemotely' },
+  // RemoteOK — large feed of remote dev jobs
+  { url: 'https://remoteok.com/remote-dev-jobs.rss', source: 'RemoteOK' },
 ];
 for (const f of feeds) {
   insertFeed.run(uuid(), f.url, f.source);
@@ -47,6 +27,6 @@ upsertSetting.run('my_skills', JSON.stringify([
   "Landing Pages","E-commerce","Auth Systems"
 ]));
 
-console.log(`Seeded ${jobs.length} jobs + default settings.`);
+console.log(`Seeded ${feeds.length} feeds + default settings. Real jobs load on boot.`);
 // Only exit when run directly (not imported)
 if (process.argv[1]?.endsWith('seed.js')) process.exit(0);

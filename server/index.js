@@ -17,8 +17,8 @@ import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 
 // Run seed on first boot if DB is empty
 import db from './db/connection.js';
-const jobCount = db.prepare('SELECT COUNT(*) as c FROM jobs').get().c;
-if (jobCount === 0) {
+const feedCount = db.prepare('SELECT COUNT(*) as c FROM feeds').get().c;
+if (feedCount === 0) {
   console.log('Empty DB detected, running seed...');
   await import('./db/seed.js');
 }
