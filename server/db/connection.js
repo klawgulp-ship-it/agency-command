@@ -4,7 +4,8 @@ import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const dbDir = join(__dirname, '../../data');
+// Use Railway persistent volume at /data if available, else local ./data
+const dbDir = existsSync('/data') ? '/data' : join(__dirname, '../../data');
 if (!existsSync(dbDir)) mkdirSync(dbDir, { recursive: true });
 
 const db = new Database(join(dbDir, 'agency.db'));
