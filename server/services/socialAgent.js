@@ -572,88 +572,208 @@ async function signTwitterRequest(method, url, params = {}) {
   return authHeader;
 }
 
+async function postTweet(text, replyTo = null) {
+  const url = 'https://api.twitter.com/2/tweets';
+  const authHeader = await signTwitterRequest('POST', url);
+  const body = { text };
+  if (replyTo) body.reply = { in_reply_to_tweet_id: replyTo };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { ...authHeader, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(15000),
+  });
+  return res.json();
+}
+
+async function searchTweets(query, maxResults = 10) {
+  const searchUrl = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=${maxResults}&tweet.fields=public_metrics,author_id,conversation_id&expansions=author_id`;
+  const authHeader = await signTwitterRequest('GET', searchUrl);
+  const res = await fetch(searchUrl, { headers: { ...authHeader }, signal: AbortSignal.timeout(10000) });
+  return res.json();
+}
+
+// ─── Viral tweet styles that get engagement ────────────────
+const VIRAL_FORMATS = [
+  // Hot takes get quote tweets + replies
+  { style: 'hot_take', prompt: `Write a controversial but defensible hot take tweet (under 280 chars) about one of these topics. Pick the spiciest angle:
+- "Stripe is overengineered for 90% of devs"
+- "Crypto payments will replace PayPal within 5 years"
+- "Most developer tools are solutions looking for problems"
+- "The best code review tool is a free CLI, not a $50/seat SaaS"
+- "Solana is eating Ethereum's lunch on payments"
+- "Open source devs deserve to get paid, but donation buttons don't work"
+Rules: Be opinionated. Take a side. Make people want to reply and argue. Under 280 chars. No emojis. Sound like a real developer with strong opinions, NOT a brand.` },
+
+  // Threads get saved + shared
+  { style: 'thread_hook', prompt: `Write a compelling thread hook tweet (under 280 chars) that makes people want to read more. Topics:
+- "I built a payment platform that accepts SOL and USDC. Here's what I learned about crypto payments:"
+- "3 free npm tools that replaced paid SaaS in my workflow:"
+- "Why I stopped using Stripe and built my own payment links:"
+- "The economics of open source bounties — how devs actually get paid:"
+Rules: End with something that makes people want to click "Show thread". Create curiosity. Under 280 chars. No emojis.` },
+
+  // Value tweets get bookmarked
+  { style: 'value_bomb', prompt: `Write a high-value tweet (under 280 chars) sharing a useful tip that developers will bookmark. Topics:
+- A quick way to accept crypto payments on any website
+- A free CLI command that does AI code review instantly
+- How to add a payment badge to your GitHub README in 1 line
+- A TypeScript migration trick using a free npm tool
+Rules: Provide immediate actionable value. Include the actual command or URL. Under 280 chars. No fluff.` },
+
+  // Engagement bait (questions)
+  { style: 'question', prompt: `Write a tweet (under 280 chars) asking a genuine question that crypto/dev people will want to answer:
+- "What's your biggest pain point accepting payments as a freelance dev?"
+- "Do you accept crypto for freelance work? Why or why not?"
+- "What's the one npm package you can't live without?"
+- "Stripe vs crypto payments for indie devs — which do you prefer?"
+Rules: Ask a real question. Make it easy to reply. People love sharing their opinion. Under 280 chars. No emojis.` },
+];
+
 async function runX() {
-  const results = { tweets: 0, errors: [] };
+  const results = { tweets: 0, threads: 0, errors: [] };
   if (!process.env.X_API_KEY || !process.env.X_ACCESS_TOKEN) {
     results.errors.push('No X/Twitter credentials');
     return results;
   }
 
   const todayCount = getPostCountToday('x');
-  if (todayCount >= 4) { results.errors.push('Daily limit reached'); return results; }
+  if (todayCount >= 12) { results.errors.push('Daily limit reached'); return results; }
 
-  // Try queued content first, fall back to Claude
+  // Alternate between viral formats
+  const formatIdx = todayCount % VIRAL_FORMATS.length;
+  const format = VIRAL_FORMATS[formatIdx];
+
+  // Try queued content first for basic tweets
   const queued = getQueuedContent('x');
-  let tweet;
-  if (queued) {
-    tweet = queued.content;
-  } else {
-    const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-    tweet = await askClaude(`Write a tweet (under 280 chars) for the dev/crypto community about: ${topic}
+  let tweetText;
 
-Mention snipelink.com?utm_source=x&utm_medium=social if relevant.
-Rules:
-- Sound like a real dev, not a brand
-- Short, punchy, opinionated
-- No hashtags unless super relevant (max 2)
-- No emojis unless natural
-- One clear thought`);
-    if (tweet) trackSpend('social-agent-haiku', 0.001);
-  }
+  if (format.style === 'thread_hook' && !queued) {
+    // Generate a thread (hook + 2-3 follow-ups)
+    try {
+      const hook = await askClaude(format.prompt);
+      if (hook) trackSpend('social-agent-haiku', 0.001);
+      if (!hook || hook.length > 280) { results.errors.push('Thread hook too long'); return results; }
 
-  if (!tweet || tweet.length < 10 || tweet.length > 280) return results;
-
-  try {
-    const url = 'https://api.twitter.com/2/tweets';
-    const authHeader = await signTwitterRequest('POST', url);
-
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        ...authHeader,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ text: tweet }),
-      signal: AbortSignal.timeout(15000),
-    });
-
-    const data = await res.json();
-    if (data.data?.id) {
+      const hookResult = await postTweet(hook);
+      if (!hookResult.data?.id) { results.errors.push('Thread hook failed'); return results; }
       results.tweets++;
-      trackPost('x', 'tweet', `tweet:${data.data.id}`, tweet);
-    } else {
-      results.errors.push(`X post: ${data.detail || data.title || JSON.stringify(data).slice(0, 100)}`);
+      trackPost('x', 'thread-hook', `tweet:${hookResult.data.id}`, hook);
+
+      // Generate thread replies
+      const thread = await askClaude(`You just posted this tweet: "${hook}"
+Now write 2-3 short follow-up tweets (each under 280 chars) that deliver on the promise. Include snipelink.com?utm_source=x&utm_medium=social in the last tweet naturally.
+Format: Return each tweet on a new line, separated by ---
+Rules: Each tweet should add value. Last tweet has the CTA. No emojis. Sound like a real dev.`);
+      if (thread) trackSpend('social-agent-haiku', 0.001);
+
+      const replies = thread.split('---').map(t => t.trim()).filter(t => t.length > 10 && t.length <= 280);
+      let lastTweetId = hookResult.data.id;
+
+      for (const reply of replies.slice(0, 3)) {
+        await sleep(2000);
+        const replyResult = await postTweet(reply, lastTweetId);
+        if (replyResult.data?.id) {
+          lastTweetId = replyResult.data.id;
+          results.tweets++;
+          trackPost('x', 'thread-reply', `tweet:${replyResult.data.id}`, reply);
+        }
+      }
+      results.threads++;
+    } catch (e) {
+      results.errors.push(`Thread: ${e.message}`);
     }
-  } catch (e) {
-    results.errors.push(`X: ${e.message}`);
+  } else {
+    // Single viral tweet
+    if (queued) {
+      tweetText = queued.content;
+    } else {
+      tweetText = await askClaude(format.prompt);
+      if (tweetText) trackSpend('social-agent-haiku', 0.001);
+    }
+
+    if (!tweetText || tweetText.length < 10 || tweetText.length > 280) return results;
+
+    try {
+      const data = await postTweet(tweetText);
+      if (data.data?.id) {
+        results.tweets++;
+        trackPost('x', format.style, `tweet:${data.data.id}`, tweetText);
+      } else {
+        results.errors.push(`X post: ${data.detail || data.title || JSON.stringify(data).slice(0, 100)}`);
+      }
+    } catch (e) {
+      results.errors.push(`X: ${e.message}`);
+    }
   }
 
   return results;
 }
 
 async function runXEngagement() {
-  const results = { likes: 0, replies: 0, errors: [] };
+  const results = { likes: 0, replies: 0, retweets: 0, errors: [] };
   if (!process.env.X_API_KEY || !process.env.X_ACCESS_TOKEN) return results;
 
+  const userId = process.env.X_ACCESS_TOKEN.split('-')[0];
+
   try {
-    // Search for relevant tweets
-    const queries = ['solana payments', 'crypto payment links', 'accept USDC', 'developer payment tools'];
+    // Search trending topics we can add value to
+    const queries = [
+      'solana payments -is:retweet lang:en',
+      'accept crypto website -is:retweet lang:en',
+      '"payment links" -is:retweet lang:en',
+      'npm developer tools -is:retweet lang:en',
+      'freelance crypto -is:retweet lang:en',
+      '"open source" bounty -is:retweet lang:en',
+      'USDC payments -is:retweet lang:en',
+      '"code review" tool -is:retweet lang:en',
+    ];
     const query = queries[Math.floor(Math.random() * queries.length)];
-
-    const searchUrl = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query + ' -is:retweet lang:en')}&max_results=10`;
-    const searchAuth = await signTwitterRequest('GET', searchUrl);
-
-    const searchRes = await fetch(searchUrl, {
-      headers: { ...searchAuth },
-      signal: AbortSignal.timeout(10000),
-    });
-    const searchData = await searchRes.json();
+    const searchData = await searchTweets(query, 10);
     const tweets = searchData.data || [];
 
-    // Like up to 3 relevant tweets
-    for (const tw of tweets.slice(0, 3)) {
+    // Sort by engagement — reply to popular tweets for maximum visibility
+    tweets.sort((a, b) => (b.public_metrics?.like_count || 0) - (a.public_metrics?.like_count || 0));
+
+    // Reply to top 2 most popular tweets with genuine, helpful replies
+    for (const tw of tweets.slice(0, 2)) {
       try {
-        const likeUrl = `https://api.twitter.com/2/users/${process.env.X_ACCESS_TOKEN.split('-')[0]}/likes`;
+        const reply = await askClaude(`Someone on X/Twitter posted: "${tw.text.slice(0, 200)}"
+
+Write a helpful reply (under 280 chars) that adds value to the conversation. If naturally relevant, mention one of:
+- snipelink.com — free payment links for SOL/USDC/PayPal
+- npx snipelink-review — free AI code review CLI
+- npx snipelink-ts — JS to TS converter
+
+Rules:
+- Be genuinely helpful first — don't force a product mention
+- If the tweet isn't relevant to our tools, just be a helpful dev
+- Sound like a real person having a conversation
+- No "Great tweet!" or sycophantic openers
+- Under 280 chars
+- No emojis`);
+
+        if (reply) {
+          trackSpend('social-agent-haiku', 0.001);
+          if (reply.length > 10 && reply.length <= 280) {
+            const replyResult = await postTweet(reply, tw.id);
+            if (replyResult.data?.id) {
+              results.replies++;
+              trackPost('x', 'reply', `reply-to:${tw.id}`, reply);
+            }
+          }
+        }
+        await sleep(3000);
+      } catch (e) {
+        results.errors.push(`Reply: ${e.message}`);
+      }
+    }
+
+    // Like up to 5 tweets — signals algo we're an active account
+    for (const tw of tweets.slice(0, 5)) {
+      try {
+        const likeUrl = `https://api.twitter.com/2/users/${userId}/likes`;
         const likeAuth = await signTwitterRequest('POST', likeUrl);
         await fetch(likeUrl, {
           method: 'POST',
@@ -662,7 +782,23 @@ async function runXEngagement() {
           signal: AbortSignal.timeout(5000),
         });
         results.likes++;
-        await sleep(1000);
+        await sleep(500);
+      } catch (e) {}
+    }
+
+    // Retweet the most popular one (if >50 likes) — shows up in our followers' feeds
+    const topTweet = tweets[0];
+    if (topTweet && (topTweet.public_metrics?.like_count || 0) > 50) {
+      try {
+        const rtUrl = `https://api.twitter.com/2/users/${userId}/retweets`;
+        const rtAuth = await signTwitterRequest('POST', rtUrl);
+        const rtRes = await fetch(rtUrl, {
+          method: 'POST',
+          headers: { ...rtAuth, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tweet_id: topTweet.id }),
+          signal: AbortSignal.timeout(5000),
+        });
+        if (rtRes.ok) results.retweets++;
       } catch (e) {}
     }
   } catch (e) {
