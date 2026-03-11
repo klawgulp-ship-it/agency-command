@@ -1,5 +1,6 @@
 import db from '../db/connection.js';
 import { notify } from './notifications.js';
+import { humanizeCode } from './codeHumanizer.js';
 
 const GITHUB_API = 'https://api.github.com';
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
@@ -606,6 +607,19 @@ async function solveBounty(bounty) {
 
   if (!fix.changes || fix.changes.length === 0) {
     return { success: false, reason: 'No changes generated' };
+  }
+
+  // ── HUMANIZER: Make code indistinguishable from senior dev ──
+  try {
+    console.log(`[SOLVER] Humanizing code to match repo style...`);
+    fix.changes = await humanizeCode(fix.changes, {
+      ...repoContext,
+      existingFileContents: fileContents,
+    });
+    console.log(`[SOLVER] Code humanized — AI tells stripped, style matched`);
+  } catch (e) {
+    console.error(`[SOLVER] Humanizer failed (using original): ${e.message}`);
+    // Non-fatal — proceed with original code
   }
 
   // Fork, commit, and PR
