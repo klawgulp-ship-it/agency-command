@@ -399,6 +399,24 @@ async function forkAndPR(owner, repo, issueNumber, fix) {
   // Wait for fork to be ready
   await new Promise(r => setTimeout(r, 3000));
 
+  // Auto-setup webhook on fork for instant PR review/merge notifications
+  try {
+    const webhookSecret = process.env.GITHUB_WEBHOOK_SECRET;
+    const railwayDomain = process.env.RAILWAY_PUBLIC_DOMAIN;
+    if (webhookSecret && railwayDomain) {
+      const webhookUrl = `https://${railwayDomain}/api/github/webhook`;
+      await gh(`/repos/${GITHUB_USERNAME}/${repo}/hooks`, {
+        method: 'POST',
+        body: JSON.stringify({
+          name: 'web', active: true,
+          events: ['pull_request', 'pull_request_review', 'pull_request_review_comment'],
+          config: { url: webhookUrl, content_type: 'json', secret: webhookSecret },
+        }),
+      });
+      console.log(`[SOLVER] Webhook installed on fork ${GITHUB_USERNAME}/${repo}`);
+    }
+  } catch (e) { /* webhook already exists or permission issue — non-fatal */ }
+
   // Get default branch
   const parentRepo = await gh(`/repos/${owner}/${repo}`);
   const defaultBranch = parentRepo.default_branch || 'main';
