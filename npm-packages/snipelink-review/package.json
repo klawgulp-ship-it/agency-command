@@ -1,0 +1,40 @@
+{
+  "name": "snipelink-review",
+  "version": "1.1.0",
+  "description": "AI-powered code review CLI - get instant code reviews with security analysis, performance suggestions, best practices, and refactoring recommendations. Supports JavaScript, TypeScript, Python, Go, Rust, and more.",
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "main": "index.js",
+  "bin": {
+    "snipelink-review": "index.js"
+  },
+  "keywords": [
+    "code-review",
+    "linter",
+    "static-analysis",
+    "security",
+    "best-practices",
+    "ai",
+    "cli",
+    "developer-tools",
+    "devtools",
+    "code-quality",
+    "refactoring",
+    "performance",
+    "snipelink"
+  ],
+  "author": "SnipeLink LLC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klawgulp-ship-it/agency-command"
+  },
+  "homepage": "https://scintillating-gratitude-production.up.railway.app/tools",
+  "bugs": {
+    "url": "https://github.com/klawgulp-ship-it/agency-command/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

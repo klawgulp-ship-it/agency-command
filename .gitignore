@@ -3,3 +3,5 @@ dist
 data/*.db
 .env
 .DS_Store
+npm-packages/.npmrc
+github-action/

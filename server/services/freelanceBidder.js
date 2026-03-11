@@ -190,6 +190,51 @@ async function scrapeReddit() {
   return gigs;
 }
 
+// ─── Source: Hacker News "Who is Hiring" ────────────────
+async function scrapeHNHiring() {
+  const gigs = [];
+  try {
+    // Find the latest "Ask HN: Who is hiring?" thread
+    const searchUrl = 'https://hn.algolia.com/api/v1/search?query=%22who+is+hiring%22&tags=ask_hn&hitsPerPage=1';
+    const searchRes = await fetch(searchUrl);
+    if (!searchRes.ok) return gigs;
+    const searchData = await searchRes.json();
+    const thread = searchData.hits?.[0];
+    if (!thread) return gigs;
+
+    // Get comments (job postings)
+    const commentsUrl = `https://hn.algolia.com/api/v1/items/${thread.objectID}`;
+    const commentsRes = await fetch(commentsUrl);
+    if (!commentsRes.ok) return gigs;
+    const commentsData = await commentsRes.json();
+
+    for (const child of (commentsData.children || []).slice(0, 50)) {
+      const text = (child.text || '').toLowerCase();
+      if (!text.includes('remote') && !text.includes('contract') && !text.includes('freelance')) continue;
+
+      const matchedSkills = TARGET_SKILLS.filter(s => text.includes(s));
+      if (matchedSkills.length === 0) continue;
+
+      const budgetMatch = (child.text || '').match(/\$\s?([\d,]+)/);
+      const budget = budgetMatch ? parseInt(budgetMatch[1].replace(/,/g, ''), 10) : 0;
+
+      gigs.push({
+        id: `hn-${child.id}`,
+        title: (child.text || '').replace(/<[^>]+>/g, '').slice(0, 120),
+        source: 'hackernews',
+        url: `https://news.ycombinator.com/item?id=${child.id}`,
+        budget,
+        currency: 'USD',
+        skills: matchedSkills,
+        description: (child.text || '').replace(/<[^>]+>/g, '').slice(0, 2000),
+      });
+    }
+  } catch (err) {
+    console.error('[BIDDER] HN scrape error:', err.message);
+  }
+  return gigs;
+}
+
 // ─── Scoring ────────────────────────────────────────────
 function scoreGig(gig) {
   let score = 0;
@@ -214,6 +259,7 @@ function scoreGig(gig) {
 
   // Source bonus (0-10)
   if (gig.source === 'freelancer') score += 10; // structured, can auto-bid
+  else if (gig.source === 'hackernews') score += 8; // high quality leads
   else if (gig.source === 'github') score += 7;
   else score += 3;
 
@@ -230,6 +276,7 @@ async function generateBidProposal(gig) {
 
   const model = gig.budget >= 500 ? 'claude-sonnet-4-6' : 'claude-haiku-4-5-20250414';
   const skills = Array.isArray(gig.skills) ? gig.skills : JSON.parse(gig.skills || '[]');
+  const budgetLine = gig.budget > 0 ? `4. Pricing: $${gig.budget} — 50% deposit / 50% on delivery via SnipeLink (${SNIPELINK_URL})` : '4. Pricing: Happy to discuss budget — payments via SnipeLink (' + SNIPELINK_URL + ')';
 
   try {
     const res = await fetch(ANTHROPIC_API_URL, {
@@ -248,7 +295,7 @@ async function generateBidProposal(gig) {
 
 GIG TITLE: ${gig.title}
 SOURCE: ${gig.source}
-BUDGET: $${gig.budget} ${gig.currency}
+BUDGET: ${gig.budget > 0 ? '$' + gig.budget + ' ' + gig.currency : 'Not specified'}
 DESCRIPTION: ${gig.description.slice(0, 1500)}
 REQUIRED SKILLS: ${skills.join(', ')}
 
@@ -256,7 +303,7 @@ PROPOSAL FORMAT:
 1. Opening hook (2 sentences addressing their specific need)
 2. Why I'm the right fit (3-4 bullet points of relevant experience)
 3. Proposed approach + timeline (brief and realistic)
-4. Pricing: $${gig.budget} — 50% deposit / 50% on delivery via SnipeLink (${SNIPELINK_URL})
+${budgetLine}
 5. Portfolio: ${PORTFOLIO_URL}
 6. Call to action
 
@@ -406,16 +453,18 @@ async function generateAndSubmitBid(gig) {
 export async function discoverGigs() {
   console.log('[BIDDER] Discovering freelance gigs...');
 
-  const [freelancerGigs, githubGigs, redditGigs] = await Promise.allSettled([
+  const [freelancerGigs, githubGigs, redditGigs, hnGigs] = await Promise.allSettled([
     scrapeFreelancer(),
     scrapeGitHubHiring(),
     scrapeReddit(),
+    scrapeHNHiring(),
   ]);
 
   const allGigs = [
     ...(freelancerGigs.status === 'fulfilled' ? freelancerGigs.value : []),
     ...(githubGigs.status === 'fulfilled' ? githubGigs.value : []),
     ...(redditGigs.status === 'fulfilled' ? redditGigs.value : []),
+    ...(hnGigs.status === 'fulfilled' ? hnGigs.value : []),
   ];
 
   console.log(`[BIDDER] Found ${allGigs.length} raw gigs across all sources`);
@@ -460,9 +509,12 @@ export async function runAutoBidder() {
   const discovery = await discoverGigs();
 
   // Step 2: Get top-scored gigs that haven't been bid on yet
+  // Allow budget=0 for GitHub/Reddit (they rarely list prices) — filter by score instead
   const candidates = db.prepare(`
     SELECT * FROM gigs
-    WHERE status = 'discovered' AND budget >= ?
+    WHERE status = 'discovered'
+      AND (budget >= ? OR source IN ('github', 'reddit', 'hackernews'))
+      AND score >= 15
     ORDER BY score DESC, budget DESC
     LIMIT ?
   `).all(MIN_BUDGET, MAX_BIDS_PER_CYCLE);

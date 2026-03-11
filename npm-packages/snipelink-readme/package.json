@@ -1,0 +1,39 @@
+{
+  "name": "snipelink-readme",
+  "version": "1.1.0",
+  "description": "AI-powered README generator - automatically creates professional README.md files from your project source code. Analyzes directory structure, dependencies, and code to generate comprehensive documentation.",
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "main": "index.js",
+  "bin": {
+    "snipelink-readme": "index.js"
+  },
+  "keywords": [
+    "readme",
+    "readme-generator",
+    "documentation",
+    "docs",
+    "markdown",
+    "ai",
+    "auto-generate",
+    "project-documentation",
+    "cli",
+    "developer-tools",
+    "devtools",
+    "snipelink"
+  ],
+  "author": "SnipeLink LLC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klawgulp-ship-it/agency-command"
+  },
+  "homepage": "https://scintillating-gratitude-production.up.railway.app/tools",
+  "bugs": {
+    "url": "https://github.com/klawgulp-ship-it/agency-command/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

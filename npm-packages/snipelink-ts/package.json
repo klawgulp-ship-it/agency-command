@@ -1,0 +1,41 @@
+{
+  "name": "snipelink-ts",
+  "version": "1.1.0",
+  "description": "AI-powered JavaScript to TypeScript converter - automatically converts .js files to fully typed .ts files with proper interfaces, type annotations, and generics. Supports React/JSX to TSX conversion.",
+  "scripts": {
+    "postinstall": "node postinstall.js"
+  },
+  "main": "index.js",
+  "bin": {
+    "snipelink-ts": "index.js"
+  },
+  "keywords": [
+    "typescript",
+    "javascript",
+    "converter",
+    "js-to-ts",
+    "type-annotations",
+    "migration",
+    "ai",
+    "cli",
+    "developer-tools",
+    "devtools",
+    "jsx",
+    "tsx",
+    "react",
+    "snipelink"
+  ],
+  "author": "SnipeLink LLC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/klawgulp-ship-it/agency-command"
+  },
+  "homepage": "https://scintillating-gratitude-production.up.railway.app/tools",
+  "bugs": {
+    "url": "https://github.com/klawgulp-ship-it/agency-command/issues"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

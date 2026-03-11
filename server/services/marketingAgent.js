@@ -163,6 +163,12 @@ const ISSUE_SEARCH_QUERIES = [
   '"convert javascript to typescript" OR "js to ts"',
   '"code review" OR "review my code" OR "need code review"',
   '"landing page template" OR "landing page generator"',
+  // Solana ecosystem
+  '"anchor idl" OR "anchor types" OR "anchor typescript"',
+  '"solana address" OR "validate wallet" OR "base58 solana"',
+  '"spl token" OR "token supply" OR "tokenomics calculator"',
+  '"solana transaction" OR "decode transaction" OR "transaction parser" language:rust',
+  '"solana keypair" OR "generate keypair" OR "ed25519 solana"',
 ];
 
 async function helpOnIssues() {
@@ -258,7 +264,22 @@ function detectToolContext(query) {
   if (query.includes('landing page')) {
     return { name: 'Landing Page Generator', url: TOOLS_URL, desc: 'Generate clean landing pages from a description' };
   }
-  return { name: 'Dev Tools', url: TOOLS_URL, desc: 'Free AI-powered developer utilities' };
+  if (query.includes('anchor') || query.includes('idl')) {
+    return { name: 'Anchor IDL Parser', url: `${TOOLS_URL}/anchor-idl-parser`, desc: 'Parse Anchor IDL and generate TypeScript types instantly' };
+  }
+  if (query.includes('solana address') || query.includes('validate wallet') || query.includes('base58')) {
+    return { name: 'Solana Address Validator', url: `${TOOLS_URL}/solana-address-validator`, desc: 'Validate Solana wallet addresses and detect known programs' };
+  }
+  if (query.includes('spl token') || query.includes('tokenomics') || query.includes('token supply')) {
+    return { name: 'SPL Token Calculator', url: `${TOOLS_URL}/spl-token-calculator`, desc: 'Plan SPL token economics — supply distribution and vesting' };
+  }
+  if (query.includes('solana transaction') || query.includes('decode transaction')) {
+    return { name: 'Solana Transaction Decoder', url: `${TOOLS_URL}/solana-tx-decoder`, desc: 'Decode base64 Solana transactions and extract instruction data' };
+  }
+  if (query.includes('keypair') || query.includes('ed25519')) {
+    return { name: 'Solana Keypair Generator', url: `${TOOLS_URL}/keypair-generator`, desc: 'Generate Solana keypairs for development and testing' };
+  }
+  return { name: 'Dev Tools', url: TOOLS_URL, desc: 'Free AI-powered developer utilities — 22+ tools including Solana dev tools' };
 }
 
 // ─── 3. GitHub Discussions ────────────────────────────────
@@ -267,6 +288,9 @@ const DISCUSSION_QUERIES = [
   'convert JavaScript TypeScript',
   'code review tool',
   'landing page builder',
+  'solana developer tools',
+  'anchor idl typescript',
+  'spl token tools',
 ];
 
 async function answerDiscussions() {
@@ -356,6 +380,11 @@ async function publishToDevTo() {
     { title: 'I Built 6 Free Dev Tools — Here\'s What I Learned', tag: 'tools', tags: ['webdev', 'javascript', 'productivity', 'showdev'] },
     { title: 'How I Automated My Freelance Pipeline with AI', tag: 'freelance', tags: ['career', 'programming', 'ai', 'productivity'] },
     { title: 'Generate Landing Pages in 30 Seconds — No Framework Needed', tag: 'landing', tags: ['webdev', 'html', 'css', 'showdev'] },
+    // Solana ecosystem articles
+    { title: 'Free Solana Dev Tools Every Builder Needs', tag: 'solana-tools', tags: ['solana', 'blockchain', 'webdev', 'showdev'] },
+    { title: 'I Built an Anchor IDL to TypeScript Generator', tag: 'anchor-idl', tags: ['solana', 'typescript', 'blockchain', 'tutorial'] },
+    { title: 'How to Validate Solana Addresses Without an RPC Call', tag: 'solana-validate', tags: ['solana', 'blockchain', 'tutorial', 'javascript'] },
+    { title: 'Planning Token Economics for Your SPL Token Launch', tag: 'tokenomics', tags: ['solana', 'blockchain', 'crypto', 'tutorial'] },
   ];
 
   // Pick topic we haven't published yet
@@ -576,6 +605,9 @@ async function githubStarOutreach() {
     'code review tool',
     'developer tools',
     'landing page generator',
+    'solana anchor template',
+    'solana dapp typescript',
+    'spl token creator',
   ];
 
   let starred = 0;
@@ -759,6 +791,89 @@ Happy to submit a PR with an improved README if you're interested! Just let me k
   return { actions };
 }
 
+// ─── 11. Solana Ecosystem Outreach ────────────────────────
+// Comment on Solana dev issues, star Solana repos, promote tools in Solana community
+async function solanaEcosystemOutreach() {
+  let actions = 0;
+
+  // Star Solana ecosystem repos for visibility
+  const solanaQueries = [
+    'solana anchor program',
+    'spl token typescript',
+    'solana dapp template',
+    'solana rust smart contract',
+    'metaplex nft',
+  ];
+  const query = solanaQueries[Math.floor(Math.random() * solanaQueries.length)];
+
+  try {
+    const results = await gh(`/search/repositories?q=${encodeURIComponent(query)}&sort=updated&per_page=8`);
+    for (const repo of (results.items || [])) {
+      if (actions >= 3) break;
+      if (repo.owner.login === GITHUB_USERNAME) continue;
+      if (alreadyCommentedOn(repo.html_url)) continue;
+
+      try {
+        await gh(`/user/starred/${repo.full_name}`, { method: 'PUT', headers: { 'Content-Length': '0' } });
+        trackAction('solana_outreach', 'star', repo.html_url, repo.full_name);
+        actions++;
+        await sleep(500);
+      } catch (e) { /* already starred */ }
+    }
+  } catch (e) {
+    console.error('[marketing] Solana star outreach failed:', e.message);
+  }
+
+  // Comment on Solana-related issues where our tools help
+  const solanaIssueQueries = [
+    '"anchor idl" "typescript" type:issue state:open',
+    '"spl token" "tokenomics" type:issue state:open',
+    '"solana" "validate address" type:issue state:open',
+    '"solana" "keypair" "generate" type:issue state:open',
+  ];
+  const issueQuery = solanaIssueQueries[Math.floor(Math.random() * solanaIssueQueries.length)];
+
+  try {
+    const searchResult = await gh(`/search/issues?q=${encodeURIComponent(issueQuery)}&sort=created&order=desc&per_page=3`);
+    for (const issue of (searchResult.items || [])) {
+      if (actions >= 5) break;
+      if (alreadyCommentedOn(issue.html_url)) continue;
+      if (issue.comments > 5) continue;
+
+      const repoPath = issue.repository_url.split('/repos/')[1];
+      const comments = await gh(`/repos/${repoPath}/issues/${issue.number}/comments?per_page=50`);
+      if (comments.some(c => c.user?.login === GITHUB_USERNAME)) continue;
+
+      const toolCtx = detectToolContext(issueQuery);
+      const prompt = `You are a Solana developer helping on a GitHub issue. The issue is: "${issue.title}"
+
+Issue body: ${(issue.body ?? '').slice(0, 800)}
+
+Write a genuinely helpful response with real technical advice for Solana development.
+
+At the end, briefly mention this free tool: ${toolCtx.name} at ${toolCtx.url} — ${toolCtx.desc}
+
+Keep it under 150 words. Be helpful first, tool mention is a brief aside. Sound like a real Solana dev.`;
+
+      const comment = await askClaude(prompt, 300);
+      if (!comment || comment.length < 50) continue;
+
+      await gh(`/repos/${repoPath}/issues/${issue.number}/comments`, {
+        method: 'POST',
+        body: JSON.stringify({ body: comment }),
+      });
+
+      trackAction('solana_outreach', 'comment', issue.html_url, comment.slice(0, 500));
+      actions++;
+      await sleep(2000);
+    }
+  } catch (e) {
+    console.error('[marketing] Solana issue outreach failed:', e.message);
+  }
+
+  return { actions };
+}
+
 // ─── Main Entry Point ─────────────────────────────────────
 export async function runMarketingAgent() {
   console.log('[marketing] Starting full marketing cycle across all platforms...');
@@ -778,19 +893,21 @@ export async function runMarketingAgent() {
   summary.stars = stars.status === 'fulfilled' ? stars.value : { starred: 0 };
   summary.trending = trending.status === 'fulfilled' ? trending.value : { actions: 0 };
 
-  // Phase 2: External platforms (parallel — each has own rate limits)
-  const [devto, reddit, stackoverflow, hackernews, npm] = await Promise.allSettled([
+  // Phase 2: External platforms + Solana outreach (parallel — each has own rate limits)
+  const [devto, reddit, stackoverflow, hackernews, npm, solana] = await Promise.allSettled([
     publishToDevTo(),
     redditOutreach(),
     stackOverflowMonitor(),
     hackerNewsMonitor(),
     npmPackageMarketing(),
+    solanaEcosystemOutreach(),
   ]);
   summary.devto = devto.status === 'fulfilled' ? devto.value : { error: devto.reason?.message };
   summary.reddit = reddit.status === 'fulfilled' ? reddit.value : { actions: 0 };
   summary.stackoverflow = stackoverflow.status === 'fulfilled' ? stackoverflow.value : [];
   summary.hackernews = hackernews.status === 'fulfilled' ? hackernews.value : { drafted: 0 };
   summary.npm = npm.status === 'fulfilled' ? npm.value : { packages: 0 };
+  summary.solana = solana.status === 'fulfilled' ? solana.value : { actions: 0 };
 
   // Count total actions
   const totalActions =
@@ -803,7 +920,8 @@ export async function runMarketingAgent() {
     (summary.reddit?.actions || 0) +
     (summary.stackoverflow?.length || 0) +
     (summary.hackernews?.drafted || 0) +
-    (summary.npm?.packages || 0);
+    (summary.npm?.packages || 0) +
+    (summary.solana?.actions || 0);
 
   const logParts = [
     `Profile: ${summary.profile?.success ? 'updated' : 'skipped'}`,
@@ -816,6 +934,7 @@ export async function runMarketingAgent() {
     `SO drafts: ${summary.stackoverflow?.length || 0}`,
     `HN drafts: ${summary.hackernews?.drafted || 0}`,
     `NPM: ${summary.npm?.packages || 0}`,
+    `Solana: ${summary.solana?.actions || 0}`,
   ];
 
   await notify(

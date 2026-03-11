@@ -832,6 +832,16 @@ export async function scrapeVerifiedPayingRepos() {
     { repo: 'documenso/documenso', queries: ['label:bounty'] },
     // Cal.com — TypeScript, scheduling, very active
     { repo: 'calcom/cal.com', queries: ['label:bounty'] },
+    // ── Solana Ecosystem — Rust/TypeScript, active bounties ──
+    // Solana core + ecosystem projects with bounty programs
+    { repo: 'solana-labs/solana', queries: ['label:bounty', '"bounty"'] },
+    { repo: 'coral-xyz/anchor', queries: ['label:bounty', '"bounty"'] },
+    { repo: 'jito-foundation/jito-solana', queries: ['label:bounty', '"bounty"'] },
+    { repo: 'helius-labs/xray', queries: ['label:bounty', '"bounty"'] },
+    { repo: 'metaplex-foundation/mpl-token-metadata', queries: ['label:bounty', '"bounty"'] },
+    { repo: 'orca-so/whirlpools', queries: ['label:bounty', '"bounty"'] },
+    { repo: 'marinade-finance/liquid-staking-program', queries: ['label:bounty', '"bounty"'] },
+    { repo: 'switchboard-xyz/switchboard', queries: ['label:bounty', '"bounty"'] },
   ];
 
   let totalImported = 0;
@@ -850,6 +860,8 @@ export async function scrapeVerifiedPayingRepos() {
 
         const data = await res.json();
         for (const issue of (data.items || [])) {
+          // Skip pull requests — only want actual issues
+          if (issue.pull_request) continue;
           const issueUrl = issue.html_url;
           if (isDuplicateBounty(issueUrl)) continue;
 
@@ -911,27 +923,33 @@ export async function scrapeVerifiedPayingRepos() {
   return { source: 'Verified', imported: totalImported };
 }
 
-// ─── Main: Scrape all bounty sources ────────────────────
+// ─── Main: Scrape all bounty sources (sequential to avoid rate limits) ──
 export async function scrapeAllBounties() {
-  console.log('[BOUNTY] Scraping all bounty sources...');
+  console.log('[BOUNTY] Scraping all bounty sources (sequential)...');
   const results = [];
 
-  const settled = await Promise.allSettled([
-    scrapeVerifiedPayingRepos(),
-    scrapeGitHubBounties(),
-    scrapeAlgoraBounties(),
-    scrapeIssueHuntBounties(),
-    scrapeBossDevBounties(),
-    scrapeGitcoinBounties(),
-    scrapeOSSBounties(),
-    scrapeFreshBounties(),
-    scrapeAutoMergeRepos(),
-  ]);
+  const sources = [
+    { name: 'Verified', fn: scrapeVerifiedPayingRepos },
+    { name: 'GitHub', fn: scrapeGitHubBounties },
+    { name: 'Algora', fn: scrapeAlgoraBounties },
+    { name: 'IssueHunt', fn: scrapeIssueHuntBounties },
+    { name: 'Boss.dev/Opire', fn: scrapeBossDevBounties },
+    { name: 'Gitcoin', fn: scrapeGitcoinBounties },
+    { name: 'OSS-Bounty', fn: scrapeOSSBounties },
+    { name: 'Fresh', fn: scrapeFreshBounties },
+    { name: 'AutoMerge', fn: scrapeAutoMergeRepos },
+  ];
 
-  const sourceNames = ['Verified', 'GitHub', 'Algora', 'IssueHunt', 'Boss.dev/Opire', 'Gitcoin', 'OSS-Bounty', 'Fresh', 'AutoMerge'];
-  for (let i = 0; i < settled.length; i++) {
-    if (settled[i].status === 'fulfilled') results.push(settled[i].value);
-    else console.error(`[BOUNTY] ${sourceNames[i]} failed:`, settled[i].reason?.message);
+  for (const { name, fn } of sources) {
+    try {
+      const result = await fn();
+      results.push(result);
+      console.log(`[BOUNTY] ${name}: ${result.imported} new`);
+    } catch (e) {
+      console.error(`[BOUNTY] ${name} failed:`, e.message);
+    }
+    // 2s delay between sources to spread API calls
+    await new Promise(r => setTimeout(r, 2000));
   }
 
   const totalImported = results.reduce((s, r) => s + r.imported, 0);
