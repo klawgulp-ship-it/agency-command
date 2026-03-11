@@ -219,8 +219,8 @@ cron.schedule('55 */6 * * *', async () => {
   } catch (e) { console.error('[CRON] Security scanner failed:', e.message); }
 });
 
-// ─── Cron: Social agent every 3 hours ────────────────────
-cron.schedule('15 */3 * * *', async () => {
+// ─── Cron: Social agent every 90 min ─────────────────────
+cron.schedule('15,45 */1 * * *', async () => {
   console.log('[CRON] Running social agent...');
   try {
     const result = await runSocialAgent();
