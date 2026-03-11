@@ -1,0 +1,29 @@
+{
+  "description": "Pre-generated content queue for social agent. Each entry is used once then marked posted.",
+  "nostr": [
+    { "content": "Tired of waiting 3-5 business days for payment settlements? SOL transfers settle in 400ms and cost less than a penny. Built snipelink.com to make accepting crypto as easy as sharing a link.", "tags": ["solana", "payments"] },
+    { "content": "Hot take: every GitHub repo with a bounty program should have a payment badge in the README. We built exactly that — embeddable SVG badges that link to crypto payment pages.", "tags": ["opensource", "bounties", "github"] },
+    { "content": "Just ran npx snipelink-review on a 2-year-old codebase. Found 3 security issues and 12 performance improvements in under a minute. Free tool, no signup.", "tags": ["devtools", "security"] },
+    { "content": "The Solana ecosystem needs better payment infrastructure for developers. Not DeFi protocols — just simple payment links that work. That's what we're building.", "tags": ["solana", "payments", "web3"] },
+    { "content": "Freelance devs: stop paying 2.9% + 30c on every invoice. Accept USDC on Solana — instant settlement, near-zero fees. snipelink.com/@yourname", "tags": ["freelance", "crypto", "solana"] },
+    { "content": "TypeScript migration doesn't have to be painful. npx snipelink-ts converts JS files with proper type inference, interfaces, and generics. Handles JSX to TSX too.", "tags": ["typescript", "devtools"] },
+    { "content": "If you maintain an open source project and accept donations, you should try embeddable crypto badges. One line in your README, supports SOL/USDC/PayPal.", "tags": ["opensource", "donations"] },
+    { "content": "Published a new Dev.to article on adding crypto payment buttons to any website. 5 minutes, zero backend code. The future of web payments is peer-to-peer.", "tags": ["webdev", "crypto", "tutorial"] },
+    { "content": "Code review tools shouldn't cost $50/mo per seat. Built a free CLI that gives you AI-powered reviews instantly: npx snipelink-review yourfile.ts", "tags": ["devtools", "ai", "codereview"] },
+    { "content": "Why I built payment links for Solana instead of Ethereum: 400ms finality, $0.00025 fees, and a developer community that actually ships.", "tags": ["solana", "ethereum", "payments"] }
+  ],
+  "mastodon": [
+    { "content": "Shipped 3 free npm CLI tools for developers:\n\nnpx snipelink-review — AI code review\nnpx snipelink-ts — JS to TS converter\nnpx snipelink-readme — README generator\n\nNo accounts, no API keys. Just run them.\n\n#DevTools #TypeScript #OpenSource", "tags": ["DevTools", "OpenSource"] },
+    { "content": "Every open source project should be able to accept tips easily. Built embeddable payment badges for GitHub READMEs — supports SOL, USDC, and PayPal.\n\nhttps://snipelink.com\n\n#OpenSource #Solana #GitHub", "tags": ["OpenSource", "Solana"] },
+    { "content": "Quick tip: if you're migrating a JS codebase to TypeScript, try npx snipelink-ts — it infers types, generates interfaces, and handles JSX→TSX automatically.\n\nFree, runs locally, no data sent anywhere.\n\n#TypeScript #JavaScript #WebDev", "tags": ["TypeScript", "WebDev"] },
+    { "content": "Freelance developers: accepting crypto payments shouldn't require a blockchain degree. SnipeLink gives you a payment page in 30 seconds — share a link, get paid in SOL/USDC.\n\nhttps://snipelink.com\n\n#Freelance #Crypto #WebDev", "tags": ["Freelance", "Crypto"] },
+    { "content": "The best developer tools are the ones you don't have to configure. That's why all our npm tools work with zero setup — just npx and go.\n\nsnipelink-review | snipelink-ts | snipelink-readme\n\n#DevTools #DX #npm", "tags": ["DevTools", "npm"] }
+  ],
+  "bluesky": [
+    { "content": "Built free payment links for devs — accept SOL, USDC, PayPal with one URL. No KYC, no monthly fees. snipelink.com", "tags": [] },
+    { "content": "Every GitHub repo with a bounty program needs a payment badge in the README. Built that. One line of markdown, instant crypto payments.", "tags": [] },
+    { "content": "npx snipelink-review gives you AI code review in your terminal. Free, no signup, works on any language. Try it on your worst file.", "tags": [] },
+    { "content": "Solana devs: we built embeddable payment widgets for your apps. Dark/light theme, SOL/USDC, drop-in JS snippet. snipelink.com", "tags": [] },
+    { "content": "TypeScript migration tip: npx snipelink-ts converts JS files with inferred types and proper interfaces. Handles React JSX to TSX too.", "tags": [] }
+  ]
+}

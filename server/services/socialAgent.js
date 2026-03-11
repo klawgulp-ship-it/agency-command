@@ -1,6 +1,11 @@
 import db from '../db/connection.js';
 import { notify } from './notifications.js';
 import { randomUUID } from 'crypto';
+import { readFileSync, writeFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // ─── Constants ────────────────────────────────────────────
 const SNIPELINK_URL = 'https://snipelink.com';
@@ -58,6 +63,21 @@ function getPostCountToday(platform) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── Content Queue (saves API credits) ────────────────────
+function getQueuedContent(platform) {
+  try {
+    const queuePath = join(__dirname, '../data/content-queue.json');
+    const queue = JSON.parse(readFileSync(queuePath, 'utf8'));
+    const items = queue[platform] || [];
+    if (items.length === 0) return null;
+    // Pop first item and save
+    const item = items.shift();
+    queue[platform] = items;
+    writeFileSync(queuePath, JSON.stringify(queue, null, 2));
+    return item;
+  } catch (e) { return null; }
+}
 
 // ─── Content Topics ────────────────────────────────────────
 const TOPICS = [
@@ -403,8 +423,15 @@ async function runNostr() {
     const sk = Uint8Array.from(skHex.match(/.{2}/g).map(b => parseInt(b, 16)));
     const pk = getPublicKey(sk);
 
-    const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-    const content = await askClaude(`Write a short Nostr post (under 280 chars) for the crypto/dev community about: ${topic}
+    // Try queued content first (free), fall back to Claude ($0.001)
+    const queued = getQueuedContent('nostr');
+    let content, postTags;
+    if (queued) {
+      content = queued.content;
+      postTags = (queued.tags || []).map(t => ['t', t]);
+    } else {
+      const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+      content = await askClaude(`Write a short Nostr post (under 280 chars) for the crypto/dev community about: ${topic}
 
 Mention snipelink.com if relevant — free payment links for SOL/USDC/PayPal.
 Rules:
@@ -413,13 +440,15 @@ Rules:
 - No hashtags in text (use tags instead)
 - No emojis unless natural
 - One clear thought`);
+      postTags = [['t', 'solana'], ['t', 'crypto'], ['t', 'devtools']];
+    }
 
     if (!content || content.length < 10) return results;
 
     const event = finalizeEvent({
       kind: 1,
       created_at: Math.floor(Date.now() / 1000),
-      tags: [['t', 'solana'], ['t', 'crypto'], ['t', 'devtools']],
+      tags: postTags || [['t', 'solana'], ['t', 'crypto'], ['t', 'devtools']],
       content,
     }, sk);
 
@@ -466,8 +495,14 @@ async function runMastodon() {
   const todayCount = getPostCountToday('mastodon');
   if (todayCount >= 4) { results.errors.push('Daily limit reached'); return results; }
 
-  const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
-  const status = await askClaude(`Write a short Mastodon post (under 500 chars) for the dev/OSS community about: ${topic}
+  // Try queued content first (free), fall back to Claude
+  const queued = getQueuedContent('mastodon');
+  let status;
+  if (queued) {
+    status = queued.content;
+  } else {
+    const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+    status = await askClaude(`Write a short Mastodon post (under 500 chars) for the dev/OSS community about: ${topic}
 
 Mention snipelink.com if relevant — free payment links for developers.
 Rules:
@@ -475,6 +510,7 @@ Rules:
 - Can use hashtags: #Solana #WebDev #OpenSource #DevTools
 - Sound helpful and genuine
 - One clear thought with a link`);
+  }
 
   if (!status || status.length < 10) return results;
 
