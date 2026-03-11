@@ -12,14 +12,17 @@
     "db:reset": "rm -f data/agency.db && node server/db/seed.js"
   },
   "dependencies": {
+    "@noble/hashes": "^2.0.1",
     "better-sqlite3": "^11.7.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "node-cron": "^3.0.3",
+    "nostr-tools": "^2.23.3",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "rss-parser": "^3.13.0",
     "uuid": "^10.0.0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",

@@ -385,6 +385,124 @@ Rules:
 }
 
 // ═══════════════════════════════════════════════════════════
+// NOSTR — Decentralized protocol (crypto community, zero signup)
+// ═══════════════════════════════════════════════════════════
+
+async function runNostr() {
+  const results = { posts: 0, errors: [] };
+  const skHex = process.env.NOSTR_PRIVATE_KEY;
+  if (!skHex) { results.errors.push('No NOSTR_PRIVATE_KEY'); return results; }
+
+  const todayCount = getPostCountToday('nostr');
+  if (todayCount >= 6) { results.errors.push('Daily limit reached'); return results; }
+
+  try {
+    const { getPublicKey, finalizeEvent } = await import('nostr-tools/pure');
+    const WebSocket = (await import('ws')).default;
+
+    const sk = Uint8Array.from(skHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+    const pk = getPublicKey(sk);
+
+    const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+    const content = await askClaude(`Write a short Nostr post (under 280 chars) for the crypto/dev community about: ${topic}
+
+Mention snipelink.com if relevant — free payment links for SOL/USDC/PayPal.
+Rules:
+- Sound like a real person in crypto, not a brand
+- Nostr is like Twitter — short, punchy, opinionated
+- No hashtags in text (use tags instead)
+- No emojis unless natural
+- One clear thought`);
+
+    if (!content || content.length < 10) return results;
+
+    const event = finalizeEvent({
+      kind: 1,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [['t', 'solana'], ['t', 'crypto'], ['t', 'devtools']],
+      content,
+    }, sk);
+
+    const relays = ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.snort.social', 'wss://relay.nostr.band'];
+
+    const publishPromises = relays.map(url => new Promise((resolve) => {
+      try {
+        const ws = new WebSocket(url);
+        const timeout = setTimeout(() => { try { ws.close(); } catch (e) {} resolve(false); }, 6000);
+        ws.on('open', () => {
+          ws.send(JSON.stringify(['EVENT', event]));
+          setTimeout(() => {
+            clearTimeout(timeout);
+            try { ws.close(); } catch (e) {}
+            resolve(true);
+          }, 1500);
+        });
+        ws.on('error', () => { clearTimeout(timeout); resolve(false); });
+      } catch (e) { resolve(false); }
+    }));
+
+    const published = (await Promise.all(publishPromises)).filter(Boolean).length;
+    if (published > 0) {
+      results.posts++;
+      trackPost('nostr', 'post', `${published} relays`, content);
+    }
+  } catch (e) {
+    results.errors.push(`Nostr: ${e.message}`);
+  }
+
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MASTODON — Fediverse (dev/OSS community)
+// ═══════════════════════════════════════════════════════════
+
+async function runMastodon() {
+  const results = { posts: 0, errors: [] };
+  const token = process.env.MASTODON_ACCESS_TOKEN;
+  const instance = process.env.MASTODON_INSTANCE || 'mastodon.social';
+  if (!token) { results.errors.push('No MASTODON_ACCESS_TOKEN'); return results; }
+
+  const todayCount = getPostCountToday('mastodon');
+  if (todayCount >= 4) { results.errors.push('Daily limit reached'); return results; }
+
+  const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+  const status = await askClaude(`Write a short Mastodon post (under 500 chars) for the dev/OSS community about: ${topic}
+
+Mention snipelink.com if relevant — free payment links for developers.
+Rules:
+- Mastodon is like a chill dev community
+- Can use hashtags: #Solana #WebDev #OpenSource #DevTools
+- Sound helpful and genuine
+- One clear thought with a link`);
+
+  if (!status || status.length < 10) return results;
+
+  try {
+    const res = await fetch(`https://${instance}/api/v1/statuses`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ status, visibility: 'public' }),
+      signal: AbortSignal.timeout(15000),
+    });
+    if (res.ok) {
+      results.posts++;
+      trackPost('mastodon', 'post', instance, status);
+    } else {
+      const err = await res.json().catch(() => ({}));
+      results.errors.push(`Mastodon: ${err.error || res.status}`);
+    }
+  } catch (e) {
+    results.errors.push(`Mastodon: ${e.message}`);
+  }
+
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
 // MAIN — Run all platforms in parallel
 // ═══════════════════════════════════════════════════════════
 
@@ -392,26 +510,27 @@ export async function runSocialAgent() {
   console.log('[SOCIAL] Starting multi-platform social agent...');
   const startTime = Date.now();
 
-  const [reddit, discord, telegram, bluesky] = await Promise.allSettled([
+  const [reddit, discord, telegram, bluesky, nostr, mastodon] = await Promise.allSettled([
     runReddit(),
     runDiscord(),
     runTelegram(),
     runBluesky(),
+    runNostr(),
+    runMastodon(),
   ]);
 
-  const results = {
-    reddit: reddit.status === 'fulfilled' ? reddit.value : { errors: [reddit.reason?.message] },
-    discord: discord.status === 'fulfilled' ? discord.value : { errors: [discord.reason?.message] },
-    telegram: telegram.status === 'fulfilled' ? telegram.value : { errors: [telegram.reason?.message] },
-    bluesky: bluesky.status === 'fulfilled' ? bluesky.value : { errors: [bluesky.reason?.message] },
-    duration: Date.now() - startTime,
-  };
+  const settled = { reddit, discord, telegram, bluesky, nostr, mastodon };
+  const results = { duration: Date.now() - startTime };
+  for (const [k, v] of Object.entries(settled)) {
+    results[k] = v.status === 'fulfilled' ? v.value : { errors: [v.reason?.message] };
+  }
 
   const totalActions = (results.reddit.comments || 0) + (results.reddit.posts || 0) +
-    (results.discord.posts || 0) + (results.telegram.messages || 0) + (results.bluesky.posts || 0);
+    (results.discord.posts || 0) + (results.telegram.messages || 0) +
+    (results.bluesky.posts || 0) + (results.nostr.posts || 0) + (results.mastodon.posts || 0);
 
   console.log(`[SOCIAL] Done in ${results.duration}ms: ${totalActions} actions`);
-  console.log(`[SOCIAL] Reddit: ${results.reddit.comments || 0} comments | Discord: ${results.discord.posts || 0} | Telegram: ${results.telegram.messages || 0} | Bluesky: ${results.bluesky.posts || 0}`);
+  console.log(`[SOCIAL] Reddit: ${results.reddit.comments || 0} | Discord: ${results.discord.posts || 0} | Telegram: ${results.telegram.messages || 0} | Bluesky: ${results.bluesky.posts || 0} | Nostr: ${results.nostr.posts || 0} | Mastodon: ${results.mastodon.posts || 0}`);
 
   if (totalActions > 0) {
     notify('social', `Social agent: ${totalActions} posts across platforms`, JSON.stringify(results));
