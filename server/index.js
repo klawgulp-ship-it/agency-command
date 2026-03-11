@@ -28,6 +28,7 @@ import { runAutoAgent } from './services/autoAgent.js';
 import { runAutoBidder } from './services/freelanceBidder.js';
 import { runSecurityScanner } from './services/securityScanner.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
+import { setupToolRoutes } from './services/microSaasEngine.js';
 
 // Run seed on first boot if DB is empty
 import db from './db/connection.js';
@@ -56,6 +57,9 @@ app.use('/api/github/webhook', express.json({
 app.use('/api/github/webhook', githubWebhookRouter);
 
 app.use(express.json({ limit: '10mb' }));
+
+// ─── Paid Tool Endpoints (instant revenue) ───────────────
+setupToolRoutes(app);
 
 // ─── API Routes ──────────────────────────────────────────
 app.use('/api/jobs', jobsRouter);
