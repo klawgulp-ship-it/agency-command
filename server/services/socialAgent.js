@@ -552,6 +552,127 @@ Rules:
 }
 
 // ═══════════════════════════════════════════════════════════
+// X (TWITTER) — Biggest reach platform
+// ═══════════════════════════════════════════════════════════
+
+async function signTwitterRequest(method, url, params = {}) {
+  const OAuth = (await import('oauth-1.0a')).default;
+  const { createHmac } = await import('crypto');
+
+  const oauth = new OAuth({
+    consumer: { key: process.env.X_API_KEY, secret: process.env.X_API_SECRET },
+    signature_method: 'HMAC-SHA1',
+    hash_function(baseString, key) {
+      return createHmac('sha1', key).update(baseString).digest('base64');
+    },
+  });
+
+  const token = { key: process.env.X_ACCESS_TOKEN, secret: process.env.X_ACCESS_SECRET };
+  const authHeader = oauth.toHeader(oauth.authorize({ url, method, data: params }, token));
+  return authHeader;
+}
+
+async function runX() {
+  const results = { tweets: 0, errors: [] };
+  if (!process.env.X_API_KEY || !process.env.X_ACCESS_TOKEN) {
+    results.errors.push('No X/Twitter credentials');
+    return results;
+  }
+
+  const todayCount = getPostCountToday('x');
+  if (todayCount >= 4) { results.errors.push('Daily limit reached'); return results; }
+
+  // Try queued content first, fall back to Claude
+  const queued = getQueuedContent('x');
+  let tweet;
+  if (queued) {
+    tweet = queued.content;
+  } else {
+    const topic = TOPICS[Math.floor(Math.random() * TOPICS.length)];
+    tweet = await askClaude(`Write a tweet (under 280 chars) for the dev/crypto community about: ${topic}
+
+Mention snipelink.com?utm_source=x&utm_medium=social if relevant.
+Rules:
+- Sound like a real dev, not a brand
+- Short, punchy, opinionated
+- No hashtags unless super relevant (max 2)
+- No emojis unless natural
+- One clear thought`);
+    if (tweet) trackSpend('social-agent-haiku', 0.001);
+  }
+
+  if (!tweet || tweet.length < 10 || tweet.length > 280) return results;
+
+  try {
+    const url = 'https://api.twitter.com/2/tweets';
+    const authHeader = await signTwitterRequest('POST', url);
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        ...authHeader,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text: tweet }),
+      signal: AbortSignal.timeout(15000),
+    });
+
+    const data = await res.json();
+    if (data.data?.id) {
+      results.tweets++;
+      trackPost('x', 'tweet', `tweet:${data.data.id}`, tweet);
+    } else {
+      results.errors.push(`X post: ${data.detail || data.title || JSON.stringify(data).slice(0, 100)}`);
+    }
+  } catch (e) {
+    results.errors.push(`X: ${e.message}`);
+  }
+
+  return results;
+}
+
+async function runXEngagement() {
+  const results = { likes: 0, replies: 0, errors: [] };
+  if (!process.env.X_API_KEY || !process.env.X_ACCESS_TOKEN) return results;
+
+  try {
+    // Search for relevant tweets
+    const queries = ['solana payments', 'crypto payment links', 'accept USDC', 'developer payment tools'];
+    const query = queries[Math.floor(Math.random() * queries.length)];
+
+    const searchUrl = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query + ' -is:retweet lang:en')}&max_results=10`;
+    const searchAuth = await signTwitterRequest('GET', searchUrl);
+
+    const searchRes = await fetch(searchUrl, {
+      headers: { ...searchAuth },
+      signal: AbortSignal.timeout(10000),
+    });
+    const searchData = await searchRes.json();
+    const tweets = searchData.data || [];
+
+    // Like up to 3 relevant tweets
+    for (const tw of tweets.slice(0, 3)) {
+      try {
+        const likeUrl = `https://api.twitter.com/2/users/${process.env.X_ACCESS_TOKEN.split('-')[0]}/likes`;
+        const likeAuth = await signTwitterRequest('POST', likeUrl);
+        await fetch(likeUrl, {
+          method: 'POST',
+          headers: { ...likeAuth, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tweet_id: tw.id }),
+          signal: AbortSignal.timeout(5000),
+        });
+        results.likes++;
+        await sleep(1000);
+      } catch (e) {}
+    }
+  } catch (e) {
+    results.errors.push(`X engagement: ${e.message}`);
+  }
+
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
 // NOSTR ENGAGEMENT — Like & follow relevant crypto/dev accounts
 // ═══════════════════════════════════════════════════════════
 
@@ -737,19 +858,21 @@ export async function runSocialAgent() {
   console.log('[SOCIAL] Starting multi-platform social agent...');
   const startTime = Date.now();
 
-  const [reddit, discord, telegram, bluesky, nostr, mastodon, nostrEngage, mastodonEngage, blueskyEngage] = await Promise.allSettled([
+  const [reddit, discord, telegram, bluesky, nostr, mastodon, x, nostrEngage, mastodonEngage, blueskyEngage, xEngage] = await Promise.allSettled([
     runReddit(),
     runDiscord(),
     runTelegram(),
     runBluesky(),
     runNostr(),
     runMastodon(),
+    runX(),
     runNostrEngagement(),
     runMastodonEngagement(),
     runBlueskyEngagement(),
+    runXEngagement(),
   ]);
 
-  const settled = { reddit, discord, telegram, bluesky, nostr, mastodon, nostrEngage, mastodonEngage, blueskyEngage };
+  const settled = { reddit, discord, telegram, bluesky, nostr, mastodon, x, nostrEngage, mastodonEngage, blueskyEngage, xEngage };
   const results = { duration: Date.now() - startTime };
   for (const [k, v] of Object.entries(settled)) {
     results[k] = v.status === 'fulfilled' ? v.value : { errors: [v.reason?.message] };
@@ -758,13 +881,14 @@ export async function runSocialAgent() {
   const totalActions = (results.reddit.comments || 0) + (results.reddit.posts || 0) +
     (results.discord.posts || 0) + (results.telegram.messages || 0) +
     (results.bluesky.posts || 0) + (results.nostr.posts || 0) + (results.mastodon.posts || 0) +
+    (results.x?.tweets || 0) +
     (results.nostrEngage.likes || 0) + (results.nostrEngage.follows || 0) +
     (results.mastodonEngage.favourites || 0) + (results.mastodonEngage.follows || 0) +
-    (results.blueskyEngage.likes || 0);
+    (results.blueskyEngage.likes || 0) + (results.xEngage?.likes || 0);
 
   console.log(`[SOCIAL] Done in ${results.duration}ms: ${totalActions} actions`);
-  console.log(`[SOCIAL] Reddit: ${results.reddit.comments || 0} | Discord: ${results.discord.posts || 0} | Telegram: ${results.telegram.messages || 0} | Bluesky: ${results.bluesky.posts || 0} | Nostr: ${results.nostr.posts || 0} | Mastodon: ${results.mastodon.posts || 0}`);
-  console.log(`[SOCIAL] Engagement — Nostr: ${results.nostrEngage.likes || 0} likes/${results.nostrEngage.follows || 0} follows | Mastodon: ${results.mastodonEngage.favourites || 0} favs/${results.mastodonEngage.follows || 0} follows | Bluesky: ${results.blueskyEngage.likes || 0} likes`);
+  console.log(`[SOCIAL] Reddit: ${results.reddit.comments || 0} | Discord: ${results.discord.posts || 0} | Telegram: ${results.telegram.messages || 0} | Bluesky: ${results.bluesky.posts || 0} | Nostr: ${results.nostr.posts || 0} | Mastodon: ${results.mastodon.posts || 0} | X: ${results.x?.tweets || 0}`);
+  console.log(`[SOCIAL] Engagement — Nostr: ${results.nostrEngage.likes || 0} likes/${results.nostrEngage.follows || 0} follows | Mastodon: ${results.mastodonEngage.favourites || 0} favs/${results.mastodonEngage.follows || 0} follows | Bluesky: ${results.blueskyEngage.likes || 0} likes | X: ${results.xEngage?.likes || 0} likes`);
 
   if (totalActions > 0) {
     notify('social', `Social agent: ${totalActions} posts across platforms`, JSON.stringify(results));
