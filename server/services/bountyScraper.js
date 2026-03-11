@@ -823,7 +823,69 @@ export async function scrapeAllBounties() {
   const totalImported = results.reduce((s, r) => s + r.imported, 0);
   console.log(`[BOUNTY] Done: ${totalImported} new bounties from ${results.length} sources`);
 
+  // Background: check repo freshness for unchecked bounties and re-score
+  try { await checkRepoFreshness(); } catch (e) {
+    console.error('[BOUNTY] Freshness check failed:', e.message);
+  }
+
   return { results, totalImported };
+}
+
+// ─── Repo freshness checker ─────────────────────────────
+// Checks if bounty repos are alive or zombie, caches result, re-scores
+async function checkRepoFreshness() {
+  const token = process.env.GITHUB_TOKEN;
+  if (!token) return;
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+    'Authorization': `token ${token}`,
+    'User-Agent': 'AgencyCommand/1.0',
+  };
+
+  // Get unique repos that haven't been checked yet
+  const unchecked = db.prepare(`
+    SELECT DISTINCT repo FROM bounties
+    WHERE status = 'open' AND repo != ''
+    AND repo NOT IN (
+      SELECT REPLACE(key, 'repo_activity:', '') FROM settings WHERE key LIKE 'repo_activity:%'
+    )
+    LIMIT 10
+  `).all();
+
+  for (const { repo } of unchecked) {
+    try {
+      const res = await fetch(`${GITHUB_API}/repos/${repo}`, { headers, signal: AbortSignal.timeout(10000) });
+      if (!res.ok) continue;
+      const data = await res.json();
+
+      const pushedAt = new Date(data.pushed_at || 0);
+      const daysSincePush = Math.round((Date.now() - pushedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+      const activity = {
+        daysSincePush,
+        stars: data.stargazers_count || 0,
+        archived: data.archived || false,
+        pushedAt: data.pushed_at,
+      };
+
+      db.prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)").run(
+        `repo_activity:${repo}`, JSON.stringify(activity)
+      );
+
+      // Re-score all open bounties for this repo
+      if (daysSincePush > 365 || data.archived) {
+        const { scoreBounty } = await import('./bountyScorer.js');
+        const bounties = db.prepare("SELECT * FROM bounties WHERE repo = ? AND status = 'open'").all(repo);
+        for (const b of bounties) {
+          const newScore = scoreBounty({ ...b, labels: JSON.parse(b.labels || '[]'), skills: JSON.parse(b.skills || '[]') });
+          db.prepare("UPDATE bounties SET roi_score = ? WHERE id = ?").run(newScore, b.id);
+        }
+        console.log(`[BOUNTY] Re-scored ${bounties.length} bounties for stale repo ${repo} (${daysSincePush}d inactive)`);
+      }
+
+      await new Promise(r => setTimeout(r, 500));
+    } catch (e) { /* non-fatal */ }
+  }
 }
 
 // ─── Queries ────────────────────────────────────────────

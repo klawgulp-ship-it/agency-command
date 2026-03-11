@@ -88,7 +88,32 @@ export function scoreBounty(bounty) {
     : bounty.difficulty === 'medium' ? 10
     : 5;
 
-  return Math.min(100, roiScore + skillMatch + rewardScore + difficultyScore);
+  // ─── Repo freshness penalty (-30 to 0 points) ─────────
+  // Dead repos = zombie bounties, nobody to merge or pay
+  let freshnessPenalty = 0;
+  const repo = bounty.repo || '';
+  if (repo) {
+    // Check if we have cached repo activity data
+    const cached = db.prepare("SELECT value FROM settings WHERE key = ?").get(`repo_activity:${repo}`);
+    if (cached) {
+      try {
+        const activity = JSON.parse(cached.value);
+        const daysSincePush = activity.daysSincePush || 999;
+        if (daysSincePush > 365 * 2) freshnessPenalty = -30;      // 2+ years dead
+        else if (daysSincePush > 365) freshnessPenalty = -20;      // 1+ year stale
+        else if (daysSincePush > 180) freshnessPenalty = -10;      // 6+ months quiet
+        else if (daysSincePush <= 30) freshnessPenalty = 5;        // Active = bonus
+      } catch (e) {}
+    }
+  }
+
+  // ─── Suspicious reward penalty (-20 to 0 points) ──────
+  // $5K+ bounties marked "easy" are almost always zombie/scam
+  let suspiciousPenalty = 0;
+  if (reward >= 5000 && bounty.difficulty === 'easy') suspiciousPenalty = -20;
+  else if (reward >= 3000 && bounty.difficulty === 'easy') suspiciousPenalty = -10;
+
+  return Math.max(0, Math.min(100, roiScore + skillMatch + rewardScore + difficultyScore + freshnessPenalty + suspiciousPenalty));
 }
 
 // Quick-solve detection: bounties Claude can likely handle in <1 hour
