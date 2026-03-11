@@ -230,8 +230,8 @@ cron.schedule('15 */3 * * *', async () => {
   } catch (e) { console.error('[CRON] Social agent failed:', e.message); }
 });
 
-// ─── Cron: YouTube agent every 6 hours ──────────────────
-cron.schedule('0 */6 * * *', async () => {
+// ─── Cron: YouTube agent every 2 hours ──────────────────
+cron.schedule('0 */2 * * *', async () => {
   console.log('[CRON] Running YouTube agent...');
   try {
     const result = await runYouTubeAgent();
