@@ -27,6 +27,8 @@ import { checkPRReviews } from './services/prResponder.js';
 import { runAutoAgent } from './services/autoAgent.js';
 import { runAutoBidder } from './services/freelanceBidder.js';
 import { runSecurityScanner } from './services/securityScanner.js';
+import { runMarketingAgent } from './services/marketingAgent.js';
+import { runSocialAgent } from './services/socialAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 import { setupToolRoutes } from './services/microSaasEngine.js';
 
@@ -57,6 +59,11 @@ app.use('/api/github/webhook', express.json({
 app.use('/api/github/webhook', githubWebhookRouter);
 
 app.use(express.json({ limit: '10mb' }));
+
+// Google Search Console verification
+app.get('/googlea433ffa9a9b091dc.html', (_req, res) => {
+  res.type('html').send('google-site-verification: googlea433ffa9a9b091dc.html');
+});
 
 // ─── Paid Tool Endpoints (instant revenue) ───────────────
 setupToolRoutes(app);
@@ -109,44 +116,34 @@ if (existsSync(distPath)) {
       const prResult = await checkPRReviews();
       if (prResult.responded > 0) console.log(`[BOOT] Responded to ${prResult.responded} PR reviews`);
     } catch (e) { console.error('[BOOT] PR review check failed:', e.message); }
+
+    // Marketing deferred to cron — save API credits on boot
   } catch (e) { console.error('[BOOT] Auto-agent failed:', e.message); }
 })();
 
-// ─── Cron: Run auto-agent every 30 min ───────────────────
-cron.schedule('*/30 * * * *', async () => {
-  console.log('[CRON] Running auto-agent...');
-  try {
-    const result = await runAutoAgent();
-    console.log(`[CRON] Agent done: ${result.jobsScraped} scraped, ${result.proposalsGenerated} proposals`);
-  } catch (e) { console.error('[CRON] Auto-agent failed:', e.message); }
-});
+// ═══ SURVIVAL MODE CRONS — conserve every API call ═══════
 
-// ─── Cron: Bounty solver every 5 min (max throughput) ─────
-cron.schedule('*/5 * * * *', async () => {
-  console.log('[CRON] Running bounty solver...');
+// ─── Cron: Auto-agent every 2 hours (was 30 min) ─────────
+// ─── Staggered cron schedules — spread GitHub API calls across the hour ──
+//  :05 — Bounty solver (highest revenue, uses cached repo data)
+//  :10 — PR review responder (earns money by addressing reviewer feedback)
+//  :20 — Scrape bounties every 2h (sequential sources, 2s delay between each)
+//  :30 — Auto-agent (job scraping + proposals)
+//  :35 — PR status check every 2h
+//  :40 — Freelance bidder every 4h
+//  :45 — PR review responder (2nd run)
+//  :50 — Marketing (drives traffic)
+//  :55 — Security scanner every 6h
+
+cron.schedule('5,35 * * * *', async () => {
+  console.log('[CRON] Running bounty solver (verified repos only)...');
   try {
     const result = await runAutoSolver();
     console.log(`[CRON] Solver done: ${result.solved}/${result.total} solved`);
   } catch (e) { console.error('[CRON] Solver failed:', e.message); }
 });
 
-// ─── Cron: Scrape bounties every 15 min (free — GitHub API only) ─
-cron.schedule('*/15 * * * *', async () => {
-  console.log('[CRON] Scraping bounties...');
-  try {
-    const result = await scrapeAllBounties();
-    console.log(`[CRON] Bounties: ${result.totalImported} new`);
-  } catch (e) { console.error('[CRON] Bounty scrape failed:', e.message); }
-});
-
-// ─── Cron: Check submitted PR status every 15 minutes (free — GitHub API only) ─
-cron.schedule('*/15 * * * *', async () => {
-  console.log('[CRON] Checking submitted bounty PRs...');
-  try { await checkSubmittedBounties(); } catch (e) { console.error('[CRON] PR check failed:', e.message); }
-});
-
-// ─── Cron: PR review auto-responder every 10 min ────────
-cron.schedule('5,15,25,35,45,55 * * * *', async () => {
+cron.schedule('10,45 * * * *', async () => {
   console.log('[CRON] Checking PR reviews...');
   try {
     const result = await checkPRReviews();
@@ -154,22 +151,63 @@ cron.schedule('5,15,25,35,45,55 * * * *', async () => {
   } catch (e) { console.error('[CRON] PR responder failed:', e.message); }
 });
 
-// ─── Cron: Freelance auto-bidder every 20 min ────────────
-cron.schedule('3,23,43 * * * *', async () => {
+cron.schedule('20 */2 * * *', async () => {
+  console.log('[CRON] Scraping bounties (sequential)...');
+  try {
+    const result = await scrapeAllBounties();
+    console.log(`[CRON] Bounties: ${result.totalImported} new`);
+  } catch (e) { console.error('[CRON] Bounty scrape failed:', e.message); }
+});
+
+cron.schedule('30 */2 * * *', async () => {
+  console.log('[CRON] Running auto-agent...');
+  try {
+    const result = await runAutoAgent();
+    console.log(`[CRON] Agent done: ${result.jobsScraped} scraped, ${result.proposalsGenerated} proposals`);
+  } catch (e) { console.error('[CRON] Auto-agent failed:', e.message); }
+});
+
+cron.schedule('35 */2 * * *', async () => {
+  console.log('[CRON] Checking submitted bounty PRs...');
+  try { await checkSubmittedBounties(); } catch (e) { console.error('[CRON] PR check failed:', e.message); }
+});
+
+cron.schedule('40 */4 * * *', async () => {
   console.log('[CRON] Running freelance auto-bidder...');
   try {
     const result = await runAutoBidder();
-    if (result.bidsSubmitted > 0) console.log(`[CRON] Bidder: ${result.bidsSubmitted} bids on ${result.gigsFound} gigs`);
+    if (result.bids_submitted > 0) console.log(`[CRON] Bidder: ${result.bids_submitted} bids submitted`);
   } catch (e) { console.error('[CRON] Bidder failed:', e.message); }
 });
 
-// ─── Cron: Security bounty scanner every 30 min ─────────
-cron.schedule('10,40 * * * *', async () => {
+cron.schedule('50 * * * *', async () => {
+  console.log('[CRON] Running marketing agent...');
+  try {
+    const result = await runMarketingAgent();
+    const actions = (result.issues?.length || 0) + (result.discussions?.length || 0) +
+      (result.stars?.starred || 0) + (result.trending?.actions || 0) +
+      (result.devto?.published || 0) + (result.reddit?.actions || 0);
+    console.log(`[CRON] Marketing: ${actions} actions`);
+  } catch (e) { console.error('[CRON] Marketing failed:', e.message); }
+});
+
+cron.schedule('55 */6 * * *', async () => {
   console.log('[CRON] Running security scanner...');
   try {
     const result = await runSecurityScanner();
     if (result.findings > 0) console.log(`[CRON] Security: ${result.findings} findings, ${result.reported} reported`);
   } catch (e) { console.error('[CRON] Security scanner failed:', e.message); }
+});
+
+// ─── Cron: Social agent every 3 hours ────────────────────
+cron.schedule('15 */3 * * *', async () => {
+  console.log('[CRON] Running social agent...');
+  try {
+    const result = await runSocialAgent();
+    const total = (result.reddit?.comments || 0) + (result.discord?.posts || 0) +
+      (result.telegram?.messages || 0) + (result.bluesky?.posts || 0);
+    if (total > 0) console.log(`[CRON] Social: ${total} posts across platforms`);
+  } catch (e) { console.error('[CRON] Social agent failed:', e.message); }
 });
 
 // ─── Cron: Check overdue invoices daily at 9am ──────────
