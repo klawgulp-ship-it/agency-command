@@ -153,4 +153,17 @@ db.exec(`
   );
 `);
 
+// PR reviews queue — for webhook-driven review responses
+db.exec(`
+  CREATE TABLE IF NOT EXISTS pr_reviews (
+    id TEXT PRIMARY KEY,
+    pr_url TEXT NOT NULL,
+    reviewer TEXT DEFAULT '',
+    state TEXT DEFAULT '',
+    body TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    handled INTEGER DEFAULT 0
+  );
+`);
+
 export default db;

@@ -19,9 +19,11 @@ import webhooksRouter from './routes/webhooks.js';
 import referralsRouter from './routes/referrals.js';
 import portalRouter from './routes/portal.js';
 import bountiesRouter from './routes/bounties.js';
+import githubWebhookRouter from './routes/githubWebhook.js';
 import { scrapeAllFeeds } from './services/feedScraper.js';
 import { runAutoSolver, runBlitzSolver, checkSubmittedBounties, syncSubmittedBounties } from './services/bountySolver.js';
 import { scrapeAllBounties } from './services/bountyScraper.js';
+import { checkPRReviews } from './services/prResponder.js';
 import { runAutoAgent } from './services/autoAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 
@@ -43,6 +45,14 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
+
+// GitHub webhook needs raw body for HMAC signature verification — mount BEFORE json parser
+app.use('/api/github/webhook', express.json({
+  limit: '1mb',
+  verify: (req, _res, buf) => { req.rawBody = buf; },
+}));
+app.use('/api/github/webhook', githubWebhookRouter);
+
 app.use(express.json({ limit: '10mb' }));
 
 // ─── API Routes ──────────────────────────────────────────
@@ -87,6 +97,12 @@ if (existsSync(distPath)) {
     console.log('[BOOT] Syncing submitted bounties from GitHub PRs...');
     const synced = await syncSubmittedBounties();
     if (synced > 0) console.log(`[BOOT] Restored ${synced} submitted bounties from open PRs`);
+
+    console.log('[BOOT] Checking PR reviews for pending feedback...');
+    try {
+      const prResult = await checkPRReviews();
+      if (prResult.responded > 0) console.log(`[BOOT] Responded to ${prResult.responded} PR reviews`);
+    } catch (e) { console.error('[BOOT] PR review check failed:', e.message); }
   } catch (e) { console.error('[BOOT] Auto-agent failed:', e.message); }
 })();
 
@@ -121,6 +137,15 @@ cron.schedule('*/15 * * * *', async () => {
 cron.schedule('*/15 * * * *', async () => {
   console.log('[CRON] Checking submitted bounty PRs...');
   try { await checkSubmittedBounties(); } catch (e) { console.error('[CRON] PR check failed:', e.message); }
+});
+
+// ─── Cron: PR review auto-responder every 10 min ────────
+cron.schedule('5,15,25,35,45,55 * * * *', async () => {
+  console.log('[CRON] Checking PR reviews...');
+  try {
+    const result = await checkPRReviews();
+    if (result.responded > 0) console.log(`[CRON] PR responder: ${result.responded} reviews addressed`);
+  } catch (e) { console.error('[CRON] PR responder failed:', e.message); }
 });
 
 // ─── Cron: Check overdue invoices daily at 9am ──────────

@@ -427,6 +427,273 @@ export async function scrapeBossDevBounties() {
   return { source: 'Boss.dev/Opire', imported: totalImported };
 }
 
+// ─── Gitcoin Bounties (via GitHub) ──────────────────────
+// Gitcoin bounties are tracked on GitHub issues with gitcoin labels
+export async function scrapeGitcoinBounties() {
+  const token = process.env.GITHUB_TOKEN;
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'AgencyCommand/1.0',
+  };
+  if (token) headers['Authorization'] = `token ${token}`;
+
+  const queries = [
+    'label:"gitcoin" "bounty" state:open',
+    '"gitcoin.co" in:body state:open "$"',
+    'label:"gitcoin" "$" in:body state:open sort:created-desc',
+    '"gitcoin" "bounty" "$" in:body state:open',
+  ];
+
+  let totalImported = 0;
+
+  for (const q of queries) {
+    try {
+      const url = `${GITHUB_API}/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=30`;
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          console.log('[BOUNTY] Gitcoin: GitHub rate limited');
+          break;
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      for (const issue of (data.items || [])) {
+        const issueUrl = issue.html_url;
+        if (isDuplicateBounty(issueUrl)) continue;
+
+        const labels = (issue.labels || []).map(l => l.name || l);
+        const repoUrl = issue.repository_url?.replace('https://api.github.com/repos/', 'https://github.com/') || '';
+        const repoName = repoUrl.split('github.com/')[1] || '';
+
+        if (isBlockedOrg(repoName)) continue;
+
+        const body = (issue.body || '').slice(0, 3000);
+        const fullText = `${issue.title} ${body} ${labels.join(' ')}`;
+
+        let reward = extractRewardFromLabels(issue.labels || []);
+        if (!reward) reward = extractRewardFromText(body);
+        if (!reward) continue;
+
+        const tokenPattern = /\b(RTC|FL0X|POINTS|XP|TOKEN)\b/i;
+        if (tokenPattern.test(issue.title) && !body.includes('$')) continue;
+        if (body.toLowerCase().includes('not accepting bounties')) continue;
+
+        const skills = extractSkills(fullText);
+        const difficulty = estimateDifficulty(issue.title, body, labels);
+        const estHours = estimateHours(difficulty);
+
+        const bounty = {
+          id: uuid(), title: issue.title, source: 'Gitcoin', platform: 'gitcoin',
+          repo: repoName, repo_url: repoUrl, issue_url: issueUrl,
+          reward, currency: 'USD',
+          labels: JSON.stringify(labels), skills: JSON.stringify(skills),
+          description: body.slice(0, 2000), difficulty, est_hours: estHours,
+          external_id: `gitcoin-${issue.id}`,
+        };
+        bounty.roi_score = scoreBounty(bounty);
+
+        insertBounty.run(
+          bounty.id, bounty.title, bounty.source, bounty.platform,
+          bounty.repo, bounty.repo_url, bounty.issue_url, bounty.reward,
+          bounty.currency, bounty.labels, bounty.skills, bounty.description,
+          bounty.difficulty, bounty.roi_score, bounty.est_hours, bounty.external_id
+        );
+        totalImported++;
+      }
+
+      await new Promise(r => setTimeout(r, 1500));
+    } catch (err) {
+      console.error(`[BOUNTY] Gitcoin search failed:`, err.message);
+    }
+  }
+
+  return { source: 'Gitcoin', imported: totalImported };
+}
+
+// ─── OSS Bounties — high-value repos with bounty programs ─
+// Targets specific open-source repos known to pay real USD bounties
+export async function scrapeOSSBounties() {
+  const token = process.env.GITHUB_TOKEN;
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'AgencyCommand/1.0',
+  };
+  if (token) headers['Authorization'] = `token ${token}`;
+
+  const queries = [
+    'repo:juspay/hyperswitch label:bounty state:open',
+    'repo:cal-com/cal.com label:bounty state:open',
+    'repo:twentyhq/twenty label:bounty state:open',
+    'repo:documenso/documenso label:bounty state:open',
+    'repo:formbricks/formbricks label:bounty state:open',
+    'repo:openbb-finance/OpenBB label:bounty state:open',
+    'repo:maybe-finance/maybe label:bounty state:open',
+    'repo:infisical/infisical label:bounty state:open',
+    '"bounty" "$" in:body state:open language:typescript sort:created-desc',
+    '"bounty" "$" in:body state:open language:rust sort:created-desc',
+  ];
+
+  let totalImported = 0;
+
+  for (const q of queries) {
+    try {
+      const url = `${GITHUB_API}/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=30`;
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          console.log('[BOUNTY] OSS: GitHub rate limited');
+          break;
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      for (const issue of (data.items || [])) {
+        const issueUrl = issue.html_url;
+        if (isDuplicateBounty(issueUrl)) continue;
+
+        const labels = (issue.labels || []).map(l => l.name || l);
+        const repoUrl = issue.repository_url?.replace('https://api.github.com/repos/', 'https://github.com/') || '';
+        const repoName = repoUrl.split('github.com/')[1] || '';
+
+        if (isBlockedOrg(repoName)) continue;
+
+        const body = (issue.body || '').slice(0, 3000);
+        const fullText = `${issue.title} ${body} ${labels.join(' ')}`;
+
+        let reward = extractRewardFromLabels(issue.labels || []);
+        if (!reward) reward = extractRewardFromText(body);
+        if (!reward) continue;
+
+        const tokenPattern = /\b(RTC|FL0X|POINTS|XP|TOKEN)\b/i;
+        if (tokenPattern.test(issue.title) && !body.includes('$')) continue;
+        if (body.toLowerCase().includes('not accepting bounties')) continue;
+
+        const skills = extractSkills(fullText);
+        const difficulty = estimateDifficulty(issue.title, body, labels);
+        const estHours = estimateHours(difficulty);
+
+        const bounty = {
+          id: uuid(), title: issue.title, source: 'OSS-Bounty', platform: 'github',
+          repo: repoName, repo_url: repoUrl, issue_url: issueUrl,
+          reward, currency: 'USD',
+          labels: JSON.stringify(labels), skills: JSON.stringify(skills),
+          description: body.slice(0, 2000), difficulty, est_hours: estHours,
+          external_id: `oss-${issue.id}`,
+        };
+        bounty.roi_score = scoreBounty(bounty);
+
+        insertBounty.run(
+          bounty.id, bounty.title, bounty.source, bounty.platform,
+          bounty.repo, bounty.repo_url, bounty.issue_url, bounty.reward,
+          bounty.currency, bounty.labels, bounty.skills, bounty.description,
+          bounty.difficulty, bounty.roi_score, bounty.est_hours, bounty.external_id
+        );
+        totalImported++;
+      }
+
+      await new Promise(r => setTimeout(r, 1500));
+    } catch (err) {
+      console.error(`[BOUNTY] OSS bounty search failed:`, err.message);
+    }
+  }
+
+  return { source: 'OSS-Bounty', imported: totalImported };
+}
+
+// ─── Fresh Bounties — last 24h, first-mover advantage ───
+// Time-sensitive search for bounties created in the last day
+export async function scrapeFreshBounties() {
+  const token = process.env.GITHUB_TOKEN;
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'AgencyCommand/1.0',
+  };
+  if (token) headers['Authorization'] = `token ${token}`;
+
+  // Yesterday's date in YYYY-MM-DD format for GitHub search
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+  const queries = [
+    `label:bounty state:open created:>${yesterday} "$"`,
+    `"bounty" "$" state:open sort:created-desc created:>${yesterday}`,
+    `label:bounty state:open created:>${yesterday} sort:created-desc`,
+    `label:"💎 bounty" state:open created:>${yesterday}`,
+  ];
+
+  let totalImported = 0;
+
+  for (const q of queries) {
+    try {
+      const url = `${GITHUB_API}/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=30`;
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          console.log('[BOUNTY] Fresh: GitHub rate limited');
+          break;
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      for (const issue of (data.items || [])) {
+        const issueUrl = issue.html_url;
+        if (isDuplicateBounty(issueUrl)) continue;
+
+        const labels = (issue.labels || []).map(l => l.name || l);
+        const repoUrl = issue.repository_url?.replace('https://api.github.com/repos/', 'https://github.com/') || '';
+        const repoName = repoUrl.split('github.com/')[1] || '';
+
+        if (isBlockedOrg(repoName)) continue;
+
+        const body = (issue.body || '').slice(0, 3000);
+        const fullText = `${issue.title} ${body} ${labels.join(' ')}`;
+
+        let reward = extractRewardFromLabels(issue.labels || []);
+        if (!reward) reward = extractRewardFromText(body);
+        if (!reward) continue;
+
+        const tokenPattern = /\b(RTC|FL0X|POINTS|XP|TOKEN)\b/i;
+        if (tokenPattern.test(issue.title) && !body.includes('$')) continue;
+        if (body.toLowerCase().includes('not accepting bounties')) continue;
+
+        const skills = extractSkills(fullText);
+        const difficulty = estimateDifficulty(issue.title, body, labels);
+        const estHours = estimateHours(difficulty);
+
+        const bounty = {
+          id: uuid(), title: issue.title, source: 'Fresh', platform: 'github',
+          repo: repoName, repo_url: repoUrl, issue_url: issueUrl,
+          reward, currency: 'USD',
+          labels: JSON.stringify(labels), skills: JSON.stringify(skills),
+          description: body.slice(0, 2000), difficulty, est_hours: estHours,
+          external_id: `fresh-${issue.id}`,
+        };
+        bounty.roi_score = scoreBounty(bounty);
+
+        insertBounty.run(
+          bounty.id, bounty.title, bounty.source, bounty.platform,
+          bounty.repo, bounty.repo_url, bounty.issue_url, bounty.reward,
+          bounty.currency, bounty.labels, bounty.skills, bounty.description,
+          bounty.difficulty, bounty.roi_score, bounty.est_hours, bounty.external_id
+        );
+        totalImported++;
+      }
+
+      await new Promise(r => setTimeout(r, 1500));
+    } catch (err) {
+      console.error(`[BOUNTY] Fresh bounty search failed:`, err.message);
+    }
+  }
+
+  return { source: 'Fresh', imported: totalImported };
+}
+
 // ─── Main: Scrape all bounty sources ────────────────────
 export async function scrapeAllBounties() {
   console.log('[BOUNTY] Scraping all bounty sources...');
@@ -437,9 +704,12 @@ export async function scrapeAllBounties() {
     scrapeAlgoraBounties(),
     scrapeIssueHuntBounties(),
     scrapeBossDevBounties(),
+    scrapeGitcoinBounties(),
+    scrapeOSSBounties(),
+    scrapeFreshBounties(),
   ]);
 
-  const sourceNames = ['GitHub', 'Algora', 'IssueHunt', 'Boss.dev/Opire'];
+  const sourceNames = ['GitHub', 'Algora', 'IssueHunt', 'Boss.dev/Opire', 'Gitcoin', 'OSS-Bounty', 'Fresh'];
   for (let i = 0; i < settled.length; i++) {
     if (settled[i].status === 'fulfilled') results.push(settled[i].value);
     else console.error(`[BOUNTY] ${sourceNames[i]} failed:`, settled[i].reason?.message);
