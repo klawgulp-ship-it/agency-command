@@ -120,7 +120,11 @@ function pickBounties(limit = 3) {
         skills LIKE '%typescript%' OR skills LIKE '%javascript%' OR skills LIKE '%python%'
         OR skills LIKE '%node%' OR skills LIKE '%react%' OR skills LIKE '%next%'
         OR skills LIKE '%express%' OR skills LIKE '%css%' OR skills LIKE '%tailwind%'
+        OR skills LIKE '%ai%' OR skills LIKE '%llm%' OR skills LIKE '%web3%'
+        OR skills LIKE '%prisma%' OR skills LIKE '%graphql%' OR skills LIKE '%firebase%'
         OR labels LIKE '%documentation%' OR labels LIKE '%docs%' OR labels LIKE '%typo%'
+        OR labels LIKE '%good first issue%' OR labels LIKE '%Bounty%'
+        OR source = 'Verified' OR source = 'AutoMerge'
         OR difficulty = 'easy'
       )
       AND (notes IS NULL OR notes NOT LIKE '%${new Date().toISOString().slice(0,10)}%')
