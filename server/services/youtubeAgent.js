@@ -46,7 +46,8 @@ const CATEGORIES = [
     ],
     description: 'Fall asleep fast with {hours} hours of heavy rain sounds. Perfect for sleeping, studying, relaxation, and meditation. No ads during playback.\n\n🔔 Subscribe for more ambient sounds\n💰 Support us: https://snipelink.com\n\n#rain #sleep #relaxation #ambient #whitenoise',
     tags: ['rain sounds', 'sleep', 'relaxation', 'ambient', 'white noise', 'rain for sleeping', 'heavy rain', 'rainfall', 'nature sounds', 'ASMR'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.7" -af "lowpass=f=800,highpass=f=50,tremolo=f=0.1:d=0.4"`,
+    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.7"`,
+    audio_filter: 'lowpass=f=800,highpass=f=50',
     color: { r: 30, g: 40, b: 60 },
     text: 'Rain Sounds',
   },
@@ -58,9 +59,10 @@ const CATEGORIES = [
       'Intense Thunderstorm with Rain | {hours} Hours',
       'Rolling Thunder for Relaxation - {hours} Hours',
     ],
-    description: '{hours} hours of powerful thunderstorm sounds mixed with heavy rain. Perfect for deep sleep, focus, and relaxation.\n\n🔔 Subscribe for more ambient sounds\n💰 Support: https://snipelink.com\n\n#thunder #storm #rain #sleep #ambient',
+    description: '{hours} hours of powerful thunderstorm sounds mixed with heavy rain. Perfect for deep sleep, focus, and relaxation.\n\nSubscribe for more ambient sounds\nSupport: https://snipelink.com\n\n#thunder #storm #rain #sleep #ambient',
     tags: ['thunderstorm', 'thunder sounds', 'storm sounds', 'rain and thunder', 'sleep sounds', 'ambient', 'relaxation', 'nature'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.8" -af "lowpass=f=600,highpass=f=30,tremolo=f=0.05:d=0.7,volume=1.2"`,
+    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.8"`,
+    audio_filter: 'lowpass=f=600,highpass=f=30,volume=1.2',
     color: { r: 20, g: 25, b: 45 },
     text: 'Thunderstorm',
   },
@@ -72,9 +74,10 @@ const CATEGORIES = [
       'Calm Ocean Waves for Deep Relaxation - {hours} Hours',
       'Beach Waves at Night | {hours} Hours of Sea Sounds',
     ],
-    description: 'Relax with {hours} hours of ocean wave sounds. Gentle waves crashing on shore — perfect for sleeping, meditation, and focus.\n\n🔔 Subscribe for more\n💰 Support: https://snipelink.com\n\n#ocean #waves #sleep #meditation #ambient',
+    description: 'Relax with {hours} hours of ocean wave sounds. Gentle waves crashing on shore — perfect for sleeping, meditation, and focus.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#ocean #waves #sleep #meditation #ambient',
     tags: ['ocean waves', 'sea sounds', 'beach', 'waves crashing', 'sleep', 'meditation', 'ambient', 'nature sounds', 'relaxation'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.5" -af "lowpass=f=1200,tremolo=f=0.08:d=0.6,volume=0.9"`,
+    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.5"`,
+    audio_filter: 'lowpass=f=1200,volume=0.9',
     color: { r: 15, g: 50, b: 80 },
     text: 'Ocean Waves',
   },
@@ -85,9 +88,10 @@ const CATEGORIES = [
       'Cozy Fireplace Sounds | {hours}h for Sleep',
       'Crackling Fire - {hours} Hours of Warmth',
     ],
-    description: '{hours} hours of crackling fireplace ambiance. Cozy, warm, and perfect for relaxation, reading, or sleep.\n\n🔔 Subscribe\n💰 Support: https://snipelink.com\n\n#fireplace #cozy #crackling #sleep #relaxation',
+    description: '{hours} hours of crackling fireplace ambiance. Cozy, warm, and perfect for relaxation, reading, or sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#fireplace #cozy #crackling #sleep #relaxation',
     tags: ['fireplace', 'crackling fire', 'cozy', 'fire sounds', 'sleep', 'relaxation', 'ambient', 'warm'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.3" -af "highpass=f=200,lowpass=f=4000,tremolo=f=3:d=0.5,volume=0.6"`,
+    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.3"`,
+    audio_filter: 'highpass=f=200,lowpass=f=4000,volume=0.6',
     color: { r: 80, g: 30, b: 10 },
     text: 'Fireplace',
   },
@@ -98,9 +102,10 @@ const CATEGORIES = [
       'Howling Wind - {hours} Hours of Ambient Sound',
       'Winter Wind Sounds for Deep Sleep | {hours}h',
     ],
-    description: '{hours} hours of wind blowing through trees. A natural ambient soundscape for sleeping, studying, or relaxing.\n\n🔔 Subscribe\n💰 Support: https://snipelink.com\n\n#wind #ambient #sleep #nature',
+    description: '{hours} hours of wind blowing through trees. A natural ambient soundscape for sleeping, studying, or relaxing.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#wind #ambient #sleep #nature',
     tags: ['wind sounds', 'howling wind', 'nature sounds', 'sleep', 'ambient', 'relaxation', 'winter wind'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5" -af "lowpass=f=500,tremolo=f=0.03:d=0.8,volume=0.8"`,
+    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,
+    audio_filter: 'lowpass=f=500,volume=0.8',
     color: { r: 50, g: 55, b: 65 },
     text: 'Wind Sounds',
   },
@@ -171,44 +176,86 @@ async function generateThumbnail(category, hours, outputPath) {
     .toFile(outputPath);
 }
 
+// ─── Visual Effects per Category ─────────────────────────
+// Each returns ffmpeg filter_complex args for animated visuals (tested, no drawtext/geq/rand)
+const VISUAL_EFFECTS = {
+  rain: (dur) => `-filter_complex "\
+    color=c=0x0a1628:s=1280x720:r=24:d=${dur},noise=alls=30:allf=t,eq=brightness=-0.1:contrast=1.1[dark];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=90:allf=t,eq=brightness=-0.4[speckle];\
+    [speckle]boxblur=0:0:0:3[vstreaks];\
+    [vstreaks]scroll=vertical=0.05:horizontal=0[falling];\
+    [dark][falling]blend=all_mode=screen:all_opacity=0.2[rain];\
+    [rain]vignette=PI/4[vout]"`,
+  thunder: (dur) => `-filter_complex "\
+    color=c=0x080e1e:s=1280x720:r=24:d=${dur},noise=alls=45:allf=t,eq=brightness=-0.15:contrast=1.2[dark];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=95:allf=t,eq=brightness=-0.35[speckle];\
+    [speckle]boxblur=0:0:0:4[vstreaks];\
+    [vstreaks]scroll=vertical=0.06:horizontal=0[falling];\
+    [dark][falling]blend=all_mode=screen:all_opacity=0.25[storm];\
+    [storm]vignette=PI/3.5[vout]"`,
+  ocean: (dur) => `-filter_complex "\
+    color=c=0x0a2840:s=1280x720:r=24:d=${dur},noise=alls=15:allf=t[noisy];\
+    color=c=0x0f3355:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t[waves];\
+    [noisy][waves]blend=all_mode=softlight:all_opacity=0.4[ocean];\
+    [ocean]eq=brightness=-0.05:contrast=1.05:saturation=1.3[blue];\
+    [blue]vignette=PI/4[vout]"`,
+  fireplace: (dur) => `-filter_complex "\
+    color=c=0x1a0800:s=1280x720:r=24:d=${dur},noise=alls=25:allf=t[noisy];\
+    color=c=0x331100:s=1280x720:r=24:d=${dur},noise=alls=60:allf=t[flicker];\
+    [noisy][flicker]blend=all_mode=screen:all_opacity=0.5[warm];\
+    [warm]eq=brightness=0.05:contrast=1.1:saturation=1.5[fire];\
+    [fire]colorbalance=rs=0.3:gs=-0.1:bs=-0.3:rm=0.2:gm=-0.05:bm=-0.2[orange];\
+    [orange]vignette=PI/3[vout]"`,
+  wind: (dur) => `-filter_complex "\
+    color=c=0x1e2530:s=1280x720:r=24:d=${dur},noise=alls=35:allf=t[noisy];\
+    color=c=0x2a3040:s=1280x720:r=24:d=${dur},noise=alls=25:allf=t[mist];\
+    [noisy][mist]blend=all_mode=softlight:all_opacity=0.5[foggy];\
+    [foggy]scroll=horizontal=0.001:vertical=0[drift];\
+    [drift]eq=brightness=-0.05:contrast=1.05[grey];\
+    [grey]vignette=PI/4[vout]"`,
+};
+
 // ─── Generate Audio/Video ─────────────────────────────────
 function generateVideo(category, durationSecs, outputPath) {
-  const { r, g, b } = category.color;
-  const colorHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  const chunkSecs = Math.min(durationSecs, 600);
+  const visualFilter = VISUAL_EFFECTS[category.name](durationSecs);
 
-  // Generate ambient audio + static color background as video
-  // Use a short loop: generate 10 min of audio, then loop it to full duration
-  const chunkSecs = Math.min(durationSecs, 600); // 10 min chunks max for generation
-  const cmd = `ffmpeg -y \
-    -f lavfi -i "color=c=0x${colorHex}:s=1280x720:r=1:d=${durationSecs}" \
+  const audioFilter = category.audio_filter || 'lowpass=f=800';
+  // Animated visual + audio (audio generated for chunk then looped)
+  const fullCmd = `ffmpeg -y \
     ${category.audio_cmd(chunkSecs)} \
-    -filter_complex "[1:a]aloop=loop=${Math.ceil(durationSecs / chunkSecs)}:size=${chunkSecs * 44100}[looped]" \
-    -map 0:v -map "[looped]" \
-    -c:v libx264 -preset ultrafast -tune stillimage -crf 28 \
+    ${visualFilter} \
+    -filter_complex "[0:a]${audioFilter},aloop=loop=${Math.ceil(durationSecs / chunkSecs)}:size=${chunkSecs * 44100}[aout]" \
+    -map "[vout]" -map "[aout]" \
+    -c:v libx264 -preset fast -crf 23 \
     -c:a aac -b:a 192k \
     -t ${durationSecs} \
     -shortest \
     "${outputPath}" 2>&1`;
 
   try {
-    execSync(cmd, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 });
+    execSync(fullCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
     return true;
   } catch (e) {
-    console.error('[YouTube] ffmpeg failed:', e.message?.slice(0, 200));
-    // Fallback: simpler command without loop
+    console.error('[YouTube] ffmpeg animated failed:', e.message?.slice(0, 300));
+    // Fallback: simple noise + vignette
     try {
-      const simpleCmd = `ffmpeg -y \
-        -f lavfi -i "color=c=0x${colorHex}:s=1280x720:r=1:d=${durationSecs}" \
+      const { r, g, b } = category.color;
+      const colorHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+      const fallbackCmd = `ffmpeg -y \
+        -f lavfi -i "color=c=0x${colorHex}:s=1280x720:r=24:d=${durationSecs}" \
         -f lavfi -i "anoisesrc=d=${durationSecs}:c=brown:r=44100:a=0.6" \
+        -filter_complex "[0:v]noise=alls=20:allf=t,vignette=PI/4[v]" \
+        -map "[v]" -map 1:a \
         -af "lowpass=f=800,highpass=f=40" \
-        -c:v libx264 -preset ultrafast -tune stillimage -crf 28 \
+        -c:v libx264 -preset fast -crf 23 \
         -c:a aac -b:a 192k \
         -shortest \
         "${outputPath}" 2>&1`;
-      execSync(simpleCmd, { timeout: 600000, maxBuffer: 10 * 1024 * 1024 });
+      execSync(fallbackCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
       return true;
     } catch (e2) {
-      console.error('[YouTube] ffmpeg fallback also failed:', e2.message?.slice(0, 200));
+      console.error('[YouTube] ffmpeg fallback also failed:', e2.message?.slice(0, 300));
       return false;
     }
   }
