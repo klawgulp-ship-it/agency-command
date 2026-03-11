@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import db from '../db/connection.js';
+import { getDailyPnL, getWeeklyReport } from '../services/analyticsTracker.js';
 
 const router = Router();
 
@@ -13,6 +14,16 @@ router.get('/', (req, res) => {
   const stageBreakdown = db.prepare('SELECT stage, COUNT(*) as count FROM clients GROUP BY stage').all();
 
   res.json({ totalClients, activeBuilds, revenue, pending, jobCount, avgScore: Math.round(avgScore), stageBreakdown });
+});
+
+router.get('/pnl', (req, res) => {
+  try {
+    const daily = getDailyPnL();
+    const weekly = getWeeklyReport();
+    res.json({ daily, weekly });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 export default router;

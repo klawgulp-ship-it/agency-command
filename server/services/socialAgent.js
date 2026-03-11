@@ -1,5 +1,6 @@
 import db from '../db/connection.js';
 import { notify } from './notifications.js';
+import { trackSpend } from './analyticsTracker.js';
 import { randomUUID } from 'crypto';
 import { readFileSync, writeFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -177,8 +178,10 @@ Rules:
 - Don't start with "Great question!" or similar
 - Be concise and valuable
 - Only mention a tool if it's genuinely relevant to the post
-- No emojis`);
+- No emojis
+- If linking to snipelink.com, append ?utm_source=reddit&utm_medium=social to the URL`);
 
+      if (comment) trackSpend('social-agent-haiku', 0.001);
       if (!comment || comment.length < 20) continue;
 
       // Post comment
@@ -225,8 +228,10 @@ Rules:
 - Sound casual and helpful, like a dev sharing something cool
 - No marketing speak
 - Keep it under 280 chars if possible
-- No emojis unless natural`);
+- No emojis unless natural
+- If linking to snipelink.com, append ?utm_source=discord&utm_medium=social to the URL`);
 
+  if (content) trackSpend('social-agent-haiku', 0.001);
   if (!content || content.length < 20) return results;
 
   for (const webhook of webhooks.slice(0, MAX_POSTS_PER_PLATFORM)) {
@@ -291,8 +296,10 @@ Rules:
 - Telegram-style: concise, informative, slightly casual
 - Can use minimal markdown (bold with *, links with []())
 - Focus on value, not hype
-- Keep under 500 chars`);
+- Keep under 500 chars
+- If linking to snipelink.com, append ?utm_source=telegram&utm_medium=social to the URL`);
 
+  trackSpend('social-agent-haiku', 0.001);
   if (!message || message.length < 20) return results;
 
   for (const chatId of channels.slice(0, MAX_POSTS_PER_PLATFORM)) {
@@ -352,8 +359,10 @@ Rules:
 - Sound like a real dev, not a brand
 - Concise, one thought
 - No hashtags (Bluesky doesn't use them much)
-- No emojis unless natural`);
+- No emojis unless natural
+- If linking to snipelink.com, append ?utm_source=bluesky&utm_medium=social to the URL`);
 
+  if (post) trackSpend('social-agent-haiku', 0.001);
   if (!post || post.length < 10 || post.length > 300) return results;
 
   try {
@@ -439,7 +448,9 @@ Rules:
 - Nostr is like Twitter — short, punchy, opinionated
 - No hashtags in text (use tags instead)
 - No emojis unless natural
-- One clear thought`);
+- One clear thought
+- If linking to snipelink.com, append ?utm_source=nostr&utm_medium=social to the URL`);
+      trackSpend('social-agent-haiku', 0.001);
       postTags = [['t', 'solana'], ['t', 'crypto'], ['t', 'devtools']];
     }
 
@@ -509,7 +520,9 @@ Rules:
 - Mastodon is like a chill dev community
 - Can use hashtags: #Solana #WebDev #OpenSource #DevTools
 - Sound helpful and genuine
-- One clear thought with a link`);
+- One clear thought with a link
+- If linking to snipelink.com, append ?utm_source=mastodon&utm_medium=social to the URL`);
+    trackSpend('social-agent-haiku', 0.001);
   }
 
   if (!status || status.length < 10) return results;
@@ -539,6 +552,184 @@ Rules:
 }
 
 // ═══════════════════════════════════════════════════════════
+// NOSTR ENGAGEMENT — Like & follow relevant crypto/dev accounts
+// ═══════════════════════════════════════════════════════════
+
+async function runNostrEngagement() {
+  const results = { likes: 0, follows: 0, errors: [] };
+  const skHex = process.env.NOSTR_PRIVATE_KEY;
+  if (!skHex) return results;
+
+  try {
+    const { getPublicKey, finalizeEvent } = await import('nostr-tools/pure');
+    const WebSocket = (await import('ws')).default;
+    const sk = Uint8Array.from(skHex.match(/.{2}/g).map(b => parseInt(b, 16)));
+
+    const ws = new WebSocket('wss://relay.damus.io');
+    const events = [];
+
+    await new Promise((resolve) => {
+      const timeout = setTimeout(() => { resolve(); }, 8000);
+      ws.on('open', () => {
+        ws.send(JSON.stringify(['REQ', 'search', { kinds: [1], search: 'solana payment', limit: 10, since: Math.floor(Date.now()/1000) - 86400 }]));
+      });
+      ws.on('message', (data) => {
+        try {
+          const msg = JSON.parse(data.toString());
+          if (msg[0] === 'EVENT' && msg[2]) events.push(msg[2]);
+          if (msg[0] === 'EOSE') { clearTimeout(timeout); resolve(); }
+        } catch(e) {}
+      });
+      ws.on('error', () => { clearTimeout(timeout); resolve(); });
+    });
+
+    // Like up to 5 relevant posts
+    for (const event of events.slice(0, 5)) {
+      const reaction = finalizeEvent({
+        kind: 7,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: [['e', event.id], ['p', event.pubkey]],
+        content: '+',
+      }, sk);
+      ws.send(JSON.stringify(['EVENT', reaction]));
+      results.likes++;
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    // Follow authors of relevant posts
+    const newFollows = events.slice(0, 5).map(e => ['p', e.pubkey]);
+    if (newFollows.length > 0) {
+      const contactList = finalizeEvent({
+        kind: 3,
+        created_at: Math.floor(Date.now() / 1000),
+        tags: newFollows,
+        content: '',
+      }, sk);
+      ws.send(JSON.stringify(['EVENT', contactList]));
+      results.follows = newFollows.length;
+    }
+
+    setTimeout(() => { try { ws.close(); } catch(e) {} }, 2000);
+    trackPost('nostr', 'engagement', 'relay.damus.io', `Liked ${results.likes}, followed ${results.follows}`);
+  } catch(e) {
+    results.errors.push('Nostr engagement: ' + e.message);
+  }
+
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
+// MASTODON ENGAGEMENT — Favourite & follow relevant accounts
+// ═══════════════════════════════════════════════════════════
+
+async function runMastodonEngagement() {
+  const results = { favourites: 0, follows: 0, errors: [] };
+  const token = process.env.MASTODON_ACCESS_TOKEN;
+  const instance = process.env.MASTODON_INSTANCE || 'mastodon.social';
+  if (!token) return results;
+
+  try {
+    const searches = ['solana payments', 'crypto developer tools', 'payment links'];
+    const query = searches[Math.floor(Math.random() * searches.length)];
+
+    const searchRes = await fetch(`https://${instance}/api/v2/search?q=${encodeURIComponent(query)}&type=statuses&limit=5`, {
+      headers: { 'Authorization': 'Bearer ' + token },
+      signal: AbortSignal.timeout(10000),
+    });
+    const searchData = await searchRes.json();
+    const statuses = searchData.statuses || [];
+
+    for (const status of statuses.slice(0, 3)) {
+      await fetch(`https://${instance}/api/v1/statuses/${status.id}/favourite`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        signal: AbortSignal.timeout(5000),
+      });
+      results.favourites++;
+
+      await fetch(`https://${instance}/api/v1/accounts/${status.account.id}/follow`, {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        signal: AbortSignal.timeout(5000),
+      });
+      results.follows++;
+
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    if (results.favourites > 0) {
+      trackPost('mastodon', 'engagement', instance, `Favourited ${results.favourites}, followed ${results.follows}`);
+    }
+  } catch(e) {
+    results.errors.push('Mastodon engagement: ' + e.message);
+  }
+
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
+// BLUESKY ENGAGEMENT — Like relevant crypto/dev posts
+// ═══════════════════════════════════════════════════════════
+
+async function runBlueskyEngagement() {
+  const results = { likes: 0, errors: [] };
+  const session = await getBlueskySession();
+  if (!session) return results;
+
+  try {
+    const searches = ['crypto payments', 'solana', 'payment links developer'];
+    const query = searches[Math.floor(Math.random() * searches.length)];
+
+    const searchRes = await fetch(`https://bsky.social/xrpc/app.bsky.feed.searchPosts?q=${encodeURIComponent(query)}&limit=5`, {
+      headers: { 'Authorization': `Bearer ${session.accessJwt}` },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!searchRes.ok) {
+      results.errors.push(`Bluesky search: ${searchRes.status}`);
+      return results;
+    }
+
+    const searchData = await searchRes.json();
+    const posts = searchData.posts || [];
+
+    for (const post of posts.slice(0, 3)) {
+      try {
+        await fetch('https://bsky.social/xrpc/com.atproto.repo.createRecord', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.accessJwt}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            repo: session.did,
+            collection: 'app.bsky.feed.like',
+            record: {
+              $type: 'app.bsky.feed.like',
+              subject: { uri: post.uri, cid: post.cid },
+              createdAt: new Date().toISOString(),
+            },
+          }),
+          signal: AbortSignal.timeout(5000),
+        });
+        results.likes++;
+        await sleep(500);
+      } catch (e) {
+        results.errors.push(`Bluesky like: ${e.message}`);
+      }
+    }
+
+    if (results.likes > 0) {
+      trackPost('bluesky', 'engagement', 'feed', `Liked ${results.likes} posts`);
+    }
+  } catch (e) {
+    results.errors.push(`Bluesky engagement: ${e.message}`);
+  }
+
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
 // MAIN — Run all platforms in parallel
 // ═══════════════════════════════════════════════════════════
 
@@ -546,16 +737,19 @@ export async function runSocialAgent() {
   console.log('[SOCIAL] Starting multi-platform social agent...');
   const startTime = Date.now();
 
-  const [reddit, discord, telegram, bluesky, nostr, mastodon] = await Promise.allSettled([
+  const [reddit, discord, telegram, bluesky, nostr, mastodon, nostrEngage, mastodonEngage, blueskyEngage] = await Promise.allSettled([
     runReddit(),
     runDiscord(),
     runTelegram(),
     runBluesky(),
     runNostr(),
     runMastodon(),
+    runNostrEngagement(),
+    runMastodonEngagement(),
+    runBlueskyEngagement(),
   ]);
 
-  const settled = { reddit, discord, telegram, bluesky, nostr, mastodon };
+  const settled = { reddit, discord, telegram, bluesky, nostr, mastodon, nostrEngage, mastodonEngage, blueskyEngage };
   const results = { duration: Date.now() - startTime };
   for (const [k, v] of Object.entries(settled)) {
     results[k] = v.status === 'fulfilled' ? v.value : { errors: [v.reason?.message] };
@@ -563,10 +757,14 @@ export async function runSocialAgent() {
 
   const totalActions = (results.reddit.comments || 0) + (results.reddit.posts || 0) +
     (results.discord.posts || 0) + (results.telegram.messages || 0) +
-    (results.bluesky.posts || 0) + (results.nostr.posts || 0) + (results.mastodon.posts || 0);
+    (results.bluesky.posts || 0) + (results.nostr.posts || 0) + (results.mastodon.posts || 0) +
+    (results.nostrEngage.likes || 0) + (results.nostrEngage.follows || 0) +
+    (results.mastodonEngage.favourites || 0) + (results.mastodonEngage.follows || 0) +
+    (results.blueskyEngage.likes || 0);
 
   console.log(`[SOCIAL] Done in ${results.duration}ms: ${totalActions} actions`);
   console.log(`[SOCIAL] Reddit: ${results.reddit.comments || 0} | Discord: ${results.discord.posts || 0} | Telegram: ${results.telegram.messages || 0} | Bluesky: ${results.bluesky.posts || 0} | Nostr: ${results.nostr.posts || 0} | Mastodon: ${results.mastodon.posts || 0}`);
+  console.log(`[SOCIAL] Engagement — Nostr: ${results.nostrEngage.likes || 0} likes/${results.nostrEngage.follows || 0} follows | Mastodon: ${results.mastodonEngage.favourites || 0} favs/${results.mastodonEngage.follows || 0} follows | Bluesky: ${results.blueskyEngage.likes || 0} likes`);
 
   if (totalActions > 0) {
     notify('social', `Social agent: ${totalActions} posts across platforms`, JSON.stringify(results));
