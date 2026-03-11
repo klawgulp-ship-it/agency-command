@@ -29,6 +29,7 @@ import { runAutoBidder } from './services/freelanceBidder.js';
 import { runSecurityScanner } from './services/securityScanner.js';
 import { runMarketingAgent } from './services/marketingAgent.js';
 import { runSocialAgent } from './services/socialAgent.js';
+import { runYouTubeAgent, getYouTubeOAuthUrl, exchangeYouTubeCode } from './services/youtubeAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 import { setupToolRoutes } from './services/microSaasEngine.js';
 
@@ -83,6 +84,25 @@ app.use('/api/webhooks', webhooksRouter);
 app.use('/api/referrals', referralsRouter);
 app.use('/api/portal', portalRouter);
 app.use('/api/bounties', bountiesRouter);
+
+// ─── YouTube OAuth Setup ─────────────────────────────────
+app.get('/api/youtube/auth', async (req, res) => {
+  try {
+    const url = await getYouTubeOAuthUrl();
+    res.json({ authUrl: url });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/oauth2callback', async (req, res) => {
+  try {
+    const tokens = await exchangeYouTubeCode(req.query.code);
+    res.json({
+      message: 'YouTube authenticated! Set this on Railway:',
+      refresh_token: tokens.refresh_token,
+      command: `railway variables --set "YOUTUBE_REFRESH_TOKEN=${tokens.refresh_token}"`,
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -208,6 +228,16 @@ cron.schedule('15 */3 * * *', async () => {
       (result.telegram?.messages || 0) + (result.bluesky?.posts || 0);
     if (total > 0) console.log(`[CRON] Social: ${total} posts across platforms`);
   } catch (e) { console.error('[CRON] Social agent failed:', e.message); }
+});
+
+// ─── Cron: YouTube agent every 6 hours ──────────────────
+cron.schedule('0 */6 * * *', async () => {
+  console.log('[CRON] Running YouTube agent...');
+  try {
+    const result = await runYouTubeAgent();
+    const actions = result.uploaded + result.comments + result.replies;
+    if (actions > 0) console.log(`[CRON] YouTube: ${result.uploaded} uploaded, ${result.comments} comments, ${result.replies} replies`);
+  } catch (e) { console.error('[CRON] YouTube agent failed:', e.message); }
 });
 
 // ─── Cron: Check overdue invoices daily at 9am ──────────
