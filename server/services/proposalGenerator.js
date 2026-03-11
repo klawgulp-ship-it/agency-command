@@ -48,6 +48,10 @@ Keep it under 300 words. No fluff. Sound human, not templated.`
     });
 
     const data = await res.json();
+    if (data.error) {
+      console.error('[PROPOSAL] API error:', JSON.stringify(data.error));
+      return { success: false, error: data.error.message || JSON.stringify(data.error) };
+    }
     const text = data.content?.map(c => c.text || '').join('\n') || '';
     if (!text) return { success: false, error: 'Empty response from Claude API' };
     return { success: true, proposal: text };

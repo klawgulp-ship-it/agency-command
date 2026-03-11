@@ -52,7 +52,27 @@ router.post('/snipelink', (req, res) => {
   }
 
   if (!invoice) {
-    console.log(`[WEBHOOK] No matching invoice for payment ${payment_id} — $${amount} from ${customer_email}`);
+    // Check if this is a bounty payment (metadata contains bountyId)
+    const meta = event.metadata || event.meta || '';
+    let bountyMeta = null;
+    try { bountyMeta = typeof meta === 'string' ? JSON.parse(meta) : meta; } catch (e) {}
+
+    if (bountyMeta && bountyMeta.bountyId) {
+      const bounty = db.prepare('SELECT * FROM bounties WHERE id = ?').get(bountyMeta.bountyId);
+      if (bounty) {
+        db.prepare("UPDATE bounties SET payout_received = 1, status = 'paid', notes = COALESCE(notes, '') || ?, updated_at = datetime('now') WHERE id = ?")
+          .run(`\n[PAID] $${amount} via SnipeLink (${payment_id})`, bounty.id);
+
+        notify('bounty_paid', `Bounty paid! +$${amount}`,
+          `"${bounty.title.slice(0, 50)}" — payout received via SnipeLink.`,
+          { bountyId: bounty.id, reward: bounty.reward, amount }, bounty.issue_url);
+
+        console.log(`[WEBHOOK] Bounty ${bounty.id} paid — $${amount}`);
+        return res.json({ received: true, matched: true, bounty_id: bounty.id });
+      }
+    }
+
+    console.log(`[WEBHOOK] No matching invoice/bounty for payment ${payment_id} — $${amount} from ${customer_email}`);
     return res.json({ received: true, matched: false });
   }
 

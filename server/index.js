@@ -17,7 +17,11 @@ import notificationsRouter from './routes/notifications.js';
 import inboundRouter from './routes/inbound.js';
 import webhooksRouter from './routes/webhooks.js';
 import referralsRouter from './routes/referrals.js';
+import portalRouter from './routes/portal.js';
+import bountiesRouter from './routes/bounties.js';
 import { scrapeAllFeeds } from './services/feedScraper.js';
+import { runAutoSolver, runBlitzSolver, checkSubmittedBounties, syncSubmittedBounties } from './services/bountySolver.js';
+import { scrapeAllBounties } from './services/bountyScraper.js';
 import { runAutoAgent } from './services/autoAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 
@@ -54,6 +58,8 @@ app.use('/api/notifications', notificationsRouter);
 app.use('/api/inbound', inboundRouter);
 app.use('/api/webhooks', webhooksRouter);
 app.use('/api/referrals', referralsRouter);
+app.use('/api/portal', portalRouter);
+app.use('/api/bounties', bountiesRouter);
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -77,16 +83,44 @@ if (existsSync(distPath)) {
     console.log('[BOOT] Running auto-agent...');
     const result = await runAutoAgent();
     result.log.forEach(l => console.log(l));
+
+    console.log('[BOOT] Syncing submitted bounties from GitHub PRs...');
+    const synced = await syncSubmittedBounties();
+    if (synced > 0) console.log(`[BOOT] Restored ${synced} submitted bounties from open PRs`);
   } catch (e) { console.error('[BOOT] Auto-agent failed:', e.message); }
 })();
 
-// ─── Cron: Run auto-agent every 15 minutes ──────────────
-cron.schedule('*/15 * * * *', async () => {
+// ─── Cron: Run auto-agent every 30 min ───────────────────
+cron.schedule('*/30 * * * *', async () => {
   console.log('[CRON] Running auto-agent...');
   try {
     const result = await runAutoAgent();
     console.log(`[CRON] Agent done: ${result.jobsScraped} scraped, ${result.proposalsGenerated} proposals`);
   } catch (e) { console.error('[CRON] Auto-agent failed:', e.message); }
+});
+
+// ─── Cron: Bounty solver every 10 min ─────────────────────
+cron.schedule('*/10 * * * *', async () => {
+  console.log('[CRON] Running bounty solver...');
+  try {
+    const result = await runAutoSolver();
+    console.log(`[CRON] Solver done: ${result.solved}/${result.total} solved`);
+  } catch (e) { console.error('[CRON] Solver failed:', e.message); }
+});
+
+// ─── Cron: Scrape bounties every 15 min (free — GitHub API only) ─
+cron.schedule('*/15 * * * *', async () => {
+  console.log('[CRON] Scraping bounties...');
+  try {
+    const result = await scrapeAllBounties();
+    console.log(`[CRON] Bounties: ${result.totalImported} new`);
+  } catch (e) { console.error('[CRON] Bounty scrape failed:', e.message); }
+});
+
+// ─── Cron: Check submitted PR status every 15 minutes (free — GitHub API only) ─
+cron.schedule('*/15 * * * *', async () => {
+  console.log('[CRON] Checking submitted bounty PRs...');
+  try { await checkSubmittedBounties(); } catch (e) { console.error('[CRON] PR check failed:', e.message); }
 });
 
 // ─── Cron: Check overdue invoices daily at 9am ──────────

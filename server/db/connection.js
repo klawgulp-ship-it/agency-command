@@ -89,9 +89,40 @@ db.exec(`
   );
 `);
 
+// Bounties table — micro-bounties aggregator
+db.exec(`
+  CREATE TABLE IF NOT EXISTS bounties (
+    id TEXT PRIMARY KEY,
+    title TEXT NOT NULL,
+    source TEXT NOT NULL,
+    platform TEXT NOT NULL DEFAULT 'github',
+    repo TEXT DEFAULT '',
+    repo_url TEXT DEFAULT '',
+    issue_url TEXT NOT NULL,
+    reward INTEGER DEFAULT 0,
+    currency TEXT DEFAULT 'USD',
+    labels TEXT DEFAULT '[]',
+    skills TEXT DEFAULT '[]',
+    description TEXT DEFAULT '',
+    difficulty TEXT DEFAULT 'medium',
+    roi_score INTEGER DEFAULT 0,
+    est_hours REAL DEFAULT 0,
+    status TEXT DEFAULT 'open',
+    claimed INTEGER DEFAULT 0,
+    submitted INTEGER DEFAULT 0,
+    completed INTEGER DEFAULT 0,
+    payout_received INTEGER DEFAULT 0,
+    notes TEXT DEFAULT '',
+    external_id TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  );
+`);
+
 // Safe migrations
 try { db.exec("ALTER TABLE invoices ADD COLUMN payment_ref TEXT DEFAULT ''"); } catch (e) { /* already exists */ }
 try { db.exec("ALTER TABLE clients ADD COLUMN referrer_code TEXT DEFAULT ''"); } catch (e) { /* already exists */ }
+try { db.exec("ALTER TABLE clients ADD COLUMN portal_token TEXT DEFAULT ''"); } catch (e) { /* already exists */ }
 
 // Referrals table
 db.exec(`

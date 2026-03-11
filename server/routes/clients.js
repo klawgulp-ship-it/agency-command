@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import db from '../db/connection.js';
 import { v4 as uuid } from 'uuid';
+import { generatePortalToken } from './portal.js';
+import { generatePaymentLink } from '../services/payments.js';
+import { notify } from '../services/notifications.js';
 
 const router = Router();
 
@@ -48,6 +51,55 @@ router.patch('/:id', (req, res) => {
   db.prepare(`UPDATE clients SET ${sets.join(', ')} WHERE id = ?`).run(...params);
   const updated = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
   res.json(updated);
+});
+
+// POST /:id/portal — generate portal token for existing client
+router.post('/:id/portal', (req, res) => {
+  const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
+  if (!client) return res.status(404).json({ error: 'Client not found' });
+
+  const token = client.portal_token || generatePortalToken(client.id);
+  const portalUrl = `${req.protocol}://${req.get('host')}/api/portal/page/${token}`;
+  res.json({ token, portal_url: portalUrl });
+});
+
+// POST /:id/invoice — generate invoice for a client
+router.post('/:id/invoice', (req, res) => {
+  const client = db.prepare('SELECT * FROM clients WHERE id = ?').get(req.params.id);
+  if (!client) return res.status(404).json({ error: 'Client not found' });
+
+  const { type, amount, note } = req.body;
+  if (!amount) return res.status(400).json({ error: 'amount required' });
+
+  const invoiceId = uuid();
+  const invoiceType = type || 'deposit';
+  const invoiceNote = note || `${invoiceType.charAt(0).toUpperCase() + invoiceType.slice(1)} for ${client.project || 'project'}`;
+
+  const invoice = {
+    id: invoiceId,
+    client_id: client.id,
+    client_name: client.name,
+    project: client.project || 'Project',
+    type: invoiceType,
+    amount: parseInt(amount),
+    note: invoiceNote,
+  };
+  invoice.payment_link = generatePaymentLink(invoice);
+
+  db.prepare(`
+    INSERT INTO invoices (id, client_id, client_name, project, type, amount, note, payment_link)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(invoiceId, client.id, client.name, invoice.project, invoiceType, invoice.amount, invoiceNote, invoice.payment_link);
+
+  notify(
+    'invoice_created',
+    `Invoice created: ${client.name}`,
+    `$${invoice.amount} ${invoiceType} invoice for ${client.project}`,
+    { clientId: client.id, invoiceId, amount: invoice.amount },
+    ''
+  );
+
+  res.json(invoice);
 });
 
 router.delete('/:id', (req, res) => {

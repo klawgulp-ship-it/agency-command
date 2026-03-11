@@ -26,6 +26,8 @@ export const api = {
   createClient: (data) => request('/clients', { method: 'POST', body: data }),
   updateClient: (id, data) => request(`/clients/${id}`, { method: 'PATCH', body: data }),
   deleteClient: (id) => request(`/clients/${id}`, { method: 'DELETE' }),
+  getPortalLink: (id) => request(`/clients/${id}/portal`, { method: 'POST' }),
+  createClientInvoice: (id, data) => request(`/clients/${id}/invoice`, { method: 'POST', body: data }),
 
   // Invoices
   getInvoices: (params) => request(`/invoices?${new URLSearchParams(params || {})}`),
@@ -53,6 +55,20 @@ export const api = {
   runAgent: () => request('/agent/run', { method: 'POST' }),
   getAgentStatus: () => request('/agent/status'),
   getAgentStats: () => request('/agent/stats'),
+
+  // Bounties
+  getBounties: (params) => request(`/bounties?${new URLSearchParams(params || {})}`),
+  getBountyStats: () => request('/bounties/stats'),
+  getTopBounties: (limit) => request(`/bounties/top?limit=${limit || 20}`),
+  getQuickWins: (limit) => request(`/bounties/quick-wins?limit=${limit || 10}`),
+  refreshBounties: () => request('/bounties/refresh', { method: 'POST' }),
+  solveBounties: () => request('/bounties/solve', { method: 'POST' }),
+  claimBounty: (id) => request(`/bounties/${id}/claim`, { method: 'POST' }),
+  submitBounty: (id) => request(`/bounties/${id}/submit`, { method: 'POST' }),
+  completeBounty: (id) => request(`/bounties/${id}/complete`, { method: 'POST' }),
+  markBountyPaid: (id) => request(`/bounties/${id}/paid`, { method: 'POST' }),
+  dismissBounty: (id) => request(`/bounties/${id}/dismiss`, { method: 'POST' }),
+  updateBountyNotes: (id, notes) => request(`/bounties/${id}`, { method: 'PATCH', body: { notes } }),
 
   // Notifications
   getNotifications: (unread) => request(`/notifications${unread ? '?unread=true' : ''}`),

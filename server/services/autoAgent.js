@@ -1,6 +1,8 @@
 import db from '../db/connection.js';
 import { generateProposal } from './proposalGenerator.js';
 import { scrapeAllFeeds } from './feedScraper.js';
+import { scrapeAllBounties, getTopBounties, getBountyStats } from './bountyScraper.js';
+import { isQuickSolve } from './bountyScorer.js';
 import { notify } from './notifications.js';
 import { generatePaymentLink } from './payments.js';
 import { v4 as uuid } from 'uuid';
@@ -19,6 +21,34 @@ export async function runAutoAgent() {
   if (totalImported > 0) {
     notify('jobs', `${totalImported} new jobs found`, `Scraped ${scrapeResults.length} feeds`, { count: totalImported });
   }
+
+  // Step 1b: Scrape all bounty sources
+  log.push('[AGENT] Scraping bounty sources...');
+  try {
+    const bountyResults = await scrapeAllBounties();
+    log.push(`[AGENT] Imported ${bountyResults.totalImported} new bounties`);
+
+    if (bountyResults.totalImported > 0) {
+      notify('bounties', `${bountyResults.totalImported} new bounties found`,
+        `Scraped ${bountyResults.results.length} bounty sources`,
+        { count: bountyResults.totalImported });
+    }
+
+    // Notify for high-value bounties
+    const topBounties = getTopBounties(5);
+    for (const b of topBounties) {
+      if (b.roi_score >= 75 && b.reward >= 200) {
+        const quickTag = isQuickSolve(b) ? ' [QUICK WIN]' : '';
+        notify('hot_bounty', `Bounty: $${b.reward}${quickTag} — ${b.title}`,
+          `ROI: ${b.roi_score}/100 | ${b.difficulty} | ~${b.est_hours}h | ${b.repo}`,
+          { bountyId: b.id, reward: b.reward, roi: b.roi_score }, b.issue_url);
+      }
+    }
+  } catch (e) {
+    log.push(`[AGENT] Bounty scrape failed: ${e.message}`);
+  }
+
+  // Step 1c: Auto-solver runs on its own 5-min cron — see index.js
 
   // Step 2: Find top unprocessed jobs (score >= 70, not dismissed, no proposal yet)
   const topJobs = db.prepare(`
@@ -182,5 +212,8 @@ export function getAgentStats() {
     LIMIT 10
   `).all();
 
-  return { totalJobs, highScoreJobs, totalClients, proposalsReady, activeFeeds, totalRevenue, pendingRevenue, unreadNotifications, needsAction };
+  // Bounty stats
+  const bountyStats = getBountyStats();
+
+  return { totalJobs, highScoreJobs, totalClients, proposalsReady, activeFeeds, totalRevenue, pendingRevenue, unreadNotifications, needsAction, bountyStats };
 }

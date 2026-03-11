@@ -284,6 +284,11 @@ function ClientPipeline() {
   const [newClient, setNewClient] = useState({ name: "", project: "", budget: "", requirements: "" });
   const [editNotes, setEditNotes] = useState("");
   const [stats, setStats] = useState(null);
+  const [invoiceType, setInvoiceType] = useState("deposit");
+  const [invoiceAmount, setInvoiceAmount] = useState("");
+  const [portalLink, setPortalLink] = useState("");
+  const [portalCopied, setPortalCopied] = useState(false);
+  const [clientInvoices, setClientInvoices] = useState([]);
 
   const load = async () => {
     const [c, s] = await Promise.all([api.getClients(), api.getStats()]);
@@ -304,6 +309,33 @@ function ClientPipeline() {
 
   const deleteClient = async (id) => {
     await api.deleteClient(id); setSelectedClient(null); load();
+  };
+
+  const generateInvoice = async () => {
+    if (!selectedClient || !invoiceAmount) return;
+    try {
+      const inv = await api.createClientInvoice(selectedClient.id, { type: invoiceType, amount: parseInt(invoiceAmount) });
+      setClientInvoices(prev => [inv, ...prev]);
+      setInvoiceAmount("");
+    } catch (e) { console.error(e); }
+  };
+
+  const copyPortalLink = async () => {
+    if (!selectedClient) return;
+    try {
+      const { portal_url } = await api.getPortalLink(selectedClient.id);
+      setPortalLink(portal_url);
+      navigator.clipboard.writeText(portal_url);
+      setPortalCopied(true);
+      setTimeout(() => setPortalCopied(false), 2000);
+    } catch (e) { console.error(e); }
+  };
+
+  const loadClientInvoices = async (clientId) => {
+    try {
+      const invs = await api.getInvoices({ client_id: clientId });
+      setClientInvoices(invs);
+    } catch (e) { setClientInvoices([]); }
   };
 
   const pipelineCounts = PIPELINE_STAGES.map(s => ({ ...s, count: clients.filter(c => c.stage === s.id).length }));
@@ -334,7 +366,7 @@ function ClientPipeline() {
         {clients.map(client => {
           const stage = PIPELINE_STAGES.find(s => s.id === client.stage);
           return (
-            <Card key={client.id} onClick={() => { setSelectedClient(client); setEditNotes(client.notes || ""); }} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px" }}>
+            <Card key={client.id} onClick={() => { setSelectedClient(client); setEditNotes(client.notes || ""); setPortalLink(""); setPortalCopied(false); loadClientInvoices(client.id); }} style={{ cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "14px 20px" }}>
               <div><div style={{ fontSize: 14, fontWeight: 600, color: "#E0E0E4" }}>{client.name}</div><div style={{ fontSize: 12, color: "#6B6B73", marginTop: 2 }}>{client.project}</div></div>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <Badge color={stage?.color}>{stage?.label}</Badge>
@@ -377,7 +409,34 @@ function ClientPipeline() {
               <TextArea value={editNotes} onChange={setEditNotes} rows={3} placeholder="Add notes..." />
               <Button variant="secondary" size="sm" style={{ marginTop: 8 }} onClick={() => updateClient(selectedClient.id, { notes: editNotes })}>Save Notes</Button>
             </div>
-            <div style={{ borderTop: "1px solid #1E1E22", paddingTop: 12, display: "flex", justifyContent: "flex-end" }}>
+            <div style={{ borderTop: "1px solid #1E1E22", paddingTop: 16 }}>
+              <div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", marginBottom: 8 }}>Generate Invoice</div>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <select value={invoiceType} onChange={e => setInvoiceType(e.target.value)} style={{ background: "#0A0A0B", color: "#E0E0E4", border: "1px solid #1E1E22", borderRadius: 6, padding: "8px 12px", fontSize: 13 }}>
+                  <option value="deposit">Deposit</option>
+                  <option value="final">Final Payment</option>
+                  <option value="milestone">Milestone</option>
+                  <option value="custom">Custom</option>
+                </select>
+                <Input value={invoiceAmount} onChange={setInvoiceAmount} placeholder="Amount ($)" type="number" style={{ width: 120 }} />
+                <Button size="sm" onClick={generateInvoice} disabled={!invoiceAmount}>Create Invoice</Button>
+              </div>
+              {clientInvoices.length > 0 && (
+                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+                  {clientInvoices.map(inv => (
+                    <div key={inv.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#0A0A0B", padding: "8px 12px", borderRadius: 6, fontSize: 13 }}>
+                      <span style={{ color: "#A0A0A8", textTransform: "capitalize" }}>{inv.type}</span>
+                      <span style={{ color: "#C8FF32", fontWeight: 700, fontFamily: "'Space Mono', monospace" }}>${(inv.amount || 0).toLocaleString()}</span>
+                      <span style={{ color: inv.status === "paid" ? "#10B981" : "#F59E0B", fontSize: 11, fontWeight: 600, textTransform: "uppercase" }}>{inv.status || "pending"}</span>
+                      {inv.payment_link && <a href={inv.payment_link} target="_blank" rel="noreferrer" style={{ color: "#C8FF32", fontSize: 11, textDecoration: "none" }}>Payment Link</a>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ borderTop: "1px solid #1E1E22", paddingTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Button variant="secondary" size="sm" onClick={copyPortalLink}>{portalCopied ? "Copied!" : "Copy Portal Link"}</Button>
+              {portalLink && <span style={{ fontSize: 11, color: "#6B6B73", maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{portalLink}</span>}
               <Button variant="danger" size="sm" onClick={() => deleteClient(selectedClient.id)}>Delete Client</Button>
             </div>
           </div>
@@ -623,6 +682,210 @@ function AgentDashboard() {
   );
 }
 
+// ─── Tab: Bounties ──────────────────────────────────────
+const BOUNTY_STATUSES = [
+  { id: "open", label: "Open", color: "#C8FF32" },
+  { id: "claimed", label: "Claimed", color: "#3B82F6" },
+  { id: "submitted", label: "Submitted", color: "#8B5CF6" },
+  { id: "completed", label: "Completed", color: "#10B981" },
+  { id: "paid", label: "Paid", color: "#059669" },
+];
+
+const DIFF_COLORS = { easy: "#10B981", medium: "#F59E0B", hard: "#EF4444" };
+
+function Bounties() {
+  const [bounties, setBounties] = useState([]);
+  const [stats, setStats] = useState(null);
+  const [filter, setFilter] = useState("open");
+  const [sort, setSort] = useState("roi_score");
+  const [difficulty, setDifficulty] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [solving, setSolving] = useState(false);
+  const [solverLog, setSolverLog] = useState([]);
+  const [selected, setSelected] = useState(null);
+
+  const load = async () => {
+    const params = { status: filter, sort };
+    if (difficulty) params.difficulty = difficulty;
+    const [b, s] = await Promise.all([api.getBounties(params), api.getBountyStats()]);
+    setBounties(b); setStats(s);
+  };
+  useEffect(() => { load(); }, [filter, sort, difficulty]);
+
+  const refresh = async () => {
+    setRefreshing(true);
+    try { await api.refreshBounties(); await load(); } catch (e) {}
+    setRefreshing(false);
+  };
+
+  const solve = async () => {
+    setSolving(true);
+    setSolverLog(["[SOLVER] Starting auto-solver..."]);
+    try {
+      const result = await api.solveBounties();
+      setSolverLog(result.log || ["[SOLVER] Done"]);
+      load();
+    } catch (e) {
+      setSolverLog(["[SOLVER] Error: " + e.message]);
+    }
+    setSolving(false);
+  };
+
+  const claim = async (id) => { await api.claimBounty(id); setSelected(null); load(); };
+  const submit = async (id) => { await api.submitBounty(id); setSelected(null); load(); };
+  const complete = async (id) => { await api.completeBounty(id); setSelected(null); load(); };
+  const markPaid = async (id) => { await api.markBountyPaid(id); setSelected(null); load(); };
+  const dismiss = async (id) => { await api.dismissBounty(id); setSelected(null); load(); };
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 20, color: "#E0E0E4" }}>Bounty Hunter</h2>
+          <p style={{ margin: "4px 0 0", fontSize: 13, color: "#6B6B73" }}>Auto-scraped code bounties — sorted by ROI ($/hour)</p>
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Button variant="secondary" onClick={refresh} disabled={refreshing}>{refreshing ? "Scraping..." : "Scrape Bounties"}</Button>
+          <Button onClick={solve} disabled={solving}>{solving ? "Solving..." : "Auto-Solve"}</Button>
+        </div>
+      </div>
+
+      {stats && (
+        <div style={{ display: "flex", gap: 10, marginBottom: 20, flexWrap: "wrap" }}>
+          <StatCard label="Open Bounties" value={stats.total} />
+          <StatCard label="Total Available" value={`$${(stats.totalReward || 0).toLocaleString()}`} accent="#C8FF32" />
+          <StatCard label="Quick Wins" value={stats.quickWins} accent="#10B981" />
+          <StatCard label="High Value ($500+)" value={stats.highValue} accent="#8B5CF6" />
+          <StatCard label="Earned" value={`$${(stats.earned || 0).toLocaleString()}`} accent="#059669" />
+          <StatCard label="Completed" value={stats.completed} accent="#3B82F6" />
+        </div>
+      )}
+
+      {solverLog.length > 0 && (
+        <Card style={{ background: "#0A0A0B", marginBottom: 16 }}>
+          <div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Auto-Solver Log</div>
+          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: 12, lineHeight: 1.8 }}>
+            {solverLog.map((line, i) => (
+              <div key={i} style={{ color: line.includes("✓") ? "#C8FF32" : line.includes("✗") || line.includes("Error") ? "#EF4444" : "#A0A0A8" }}>{line}</div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 2 }}>
+          {[{ id: "open", label: "Open" }, { id: "claimed", label: "Claimed" }, { id: "submitted", label: "Submitted" }, { id: "completed", label: "Done" }, { id: "all", label: "All" }].map(f => (
+            <button key={f.id} onClick={() => setFilter(f.id)} style={{
+              background: filter === f.id ? "#1E1E22" : "transparent", border: filter === f.id ? "1px solid #2A2A2E" : "1px solid transparent",
+              borderRadius: 6, padding: "5px 12px", color: filter === f.id ? "#C8FF32" : "#6B6B73", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+            }}>{f.label}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 2, marginLeft: 8 }}>
+          {[{ id: "", label: "All" }, { id: "easy", label: "Easy" }, { id: "medium", label: "Med" }, { id: "hard", label: "Hard" }].map(d => (
+            <button key={d.id} onClick={() => setDifficulty(d.id)} style={{
+              background: difficulty === d.id ? "#1E1E22" : "transparent", border: difficulty === d.id ? "1px solid #2A2A2E" : "1px solid transparent",
+              borderRadius: 6, padding: "5px 10px", color: difficulty === d.id ? (DIFF_COLORS[d.id] || "#C8FF32") : "#6B6B73", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+            }}>{d.label}</button>
+          ))}
+        </div>
+        <Select value={sort} onChange={v => setSort(v)} options={[
+          { value: "roi_score", label: "Best ROI" },
+          { value: "reward", label: "Highest Reward" },
+          { value: "easiest", label: "Easiest First" },
+          { value: "newest", label: "Newest" },
+        ]} style={{ marginLeft: "auto", width: 160 }} />
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {bounties.map(b => {
+          const hourlyRate = b.est_hours > 0 ? Math.round(b.reward / b.est_hours) : 0;
+          return (
+            <Card key={b.id} onClick={() => setSelected(b)} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 14, padding: "14px 18px" }}>
+              <div style={{ minWidth: 48, textAlign: "center" }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: "50%",
+                  background: b.roi_score >= 70 ? "#C8FF3220" : b.roi_score >= 50 ? "#F59E0B20" : "#6B6B7320",
+                  border: `2px solid ${b.roi_score >= 70 ? "#C8FF32" : b.roi_score >= 50 ? "#F59E0B" : "#6B6B73"}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 14, fontWeight: 700, color: b.roi_score >= 70 ? "#C8FF32" : b.roi_score >= 50 ? "#F59E0B" : "#6B6B73",
+                  fontFamily: "'Space Mono', monospace",
+                }}>{b.roi_score}</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#E0E0E4", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{b.title}</div>
+                <div style={{ display: "flex", gap: 6, marginTop: 4, flexWrap: "wrap", alignItems: "center" }}>
+                  <Badge color={DIFF_COLORS[b.difficulty] || "#6B6B73"}>{b.difficulty}</Badge>
+                  <span style={{ fontSize: 11, color: "#6B6B73" }}>{b.repo || b.source}</span>
+                  {b.skills?.slice(0, 3).map(s => <Badge key={s} color="#3B82F6">{s}</Badge>)}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", minWidth: 100 }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: "#C8FF32", fontFamily: "'Space Mono', monospace" }}>${b.reward}</div>
+                <div style={{ fontSize: 11, color: "#6B6B73", marginTop: 2 }}>~{b.est_hours}h (${hourlyRate}/hr)</div>
+              </div>
+            </Card>
+          );
+        })}
+        {bounties.length === 0 && <div style={{ textAlign: "center", padding: 40, color: "#6B6B73" }}>No bounties found. Hit "Scrape Bounties" to fetch.</div>}
+      </div>
+
+      <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.title || ""}>
+        {selected && (() => {
+          const hourlyRate = selected.est_hours > 0 ? Math.round(selected.reward / selected.est_hours) : 0;
+          return (
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+                <div><div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", marginBottom: 4 }}>Reward</div><div style={{ color: "#C8FF32", fontSize: 24, fontWeight: 700, fontFamily: "'Space Mono', monospace" }}>${selected.reward}</div></div>
+                <div><div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", marginBottom: 4 }}>ROI Score</div><div style={{ color: selected.roi_score >= 70 ? "#C8FF32" : "#F59E0B", fontSize: 24, fontWeight: 700, fontFamily: "'Space Mono', monospace" }}>{selected.roi_score}/100</div></div>
+                <div><div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", marginBottom: 4 }}>$/Hour</div><div style={{ color: "#E0E0E4", fontSize: 24, fontWeight: 700, fontFamily: "'Space Mono', monospace" }}>${hourlyRate}</div></div>
+                <div><div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", marginBottom: 4 }}>Est. Time</div><div style={{ color: "#E0E0E4", fontSize: 24, fontWeight: 700 }}>{selected.est_hours}h</div></div>
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Badge color={DIFF_COLORS[selected.difficulty]}>{selected.difficulty}</Badge>
+                <Badge color="#3B82F6">{selected.source}</Badge>
+                {selected.skills?.map(s => <Badge key={s} color="#8B5CF6">{s}</Badge>)}
+              </div>
+
+              {selected.repo && (
+                <div><div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", marginBottom: 4 }}>Repository</div><div style={{ fontSize: 13, color: "#A0A0A8" }}>{selected.repo}</div></div>
+              )}
+
+              {selected.description && (
+                <div style={{ background: "#0A0A0B", borderRadius: 8, padding: 14, maxHeight: 200, overflow: "auto" }}>
+                  <div style={{ fontSize: 11, color: "#6B6B73", textTransform: "uppercase", marginBottom: 6 }}>Description</div>
+                  <div style={{ fontSize: 12, color: "#A0A0A8", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>{selected.description.slice(0, 800)}</div>
+                </div>
+              )}
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Button onClick={() => window.open(selected.issue_url, '_blank')}>Open Issue</Button>
+                {selected.status === "open" && <Button variant="secondary" onClick={() => claim(selected.id)}>Claim</Button>}
+                {selected.status === "claimed" && <Button variant="secondary" onClick={() => submit(selected.id)}>Mark Submitted</Button>}
+                {selected.status === "submitted" && <Button variant="secondary" onClick={() => complete(selected.id)}>Mark Complete</Button>}
+                {selected.status === "completed" && <Button onClick={() => markPaid(selected.id)}>Mark Paid</Button>}
+                {selected.status === "open" && <Button variant="danger" onClick={() => dismiss(selected.id)}>Dismiss</Button>}
+              </div>
+
+              <div style={{ display: "flex", gap: 6 }}>
+                {BOUNTY_STATUSES.map(s => (
+                  <div key={s.id} style={{
+                    flex: 1, textAlign: "center", padding: "6px 0", borderRadius: 4, fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
+                    background: selected.status === s.id ? s.color + "20" : "#0A0A0B",
+                    color: selected.status === s.id ? s.color : "#6B6B73",
+                    border: `1px solid ${selected.status === s.id ? s.color + "40" : "#1E1E22"}`,
+                  }}>{s.label}</div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+      </Modal>
+    </div>
+  );
+}
+
 // ─── Toast Notifications ─────────────────────────────────
 function ToastContainer({ toasts, onDismiss }) {
   return (
@@ -687,6 +950,7 @@ export default function App() {
 
   const tabs = [
     { id: "agent", label: "Agent", icon: "⚡" },
+    { id: "bounties", label: "Bounties", icon: "💎" },
     { id: "jobs", label: "Job Monitor", icon: "📡" },
     { id: "proposal", label: "Proposals", icon: "📝" },
     { id: "pipeline", label: "Pipeline", icon: "🔄" },
@@ -735,6 +999,7 @@ export default function App() {
       </div>
       <div style={{ maxWidth: 1000, margin: "0 auto", padding: "24px 20px" }}>
         {tab === "agent" && <AgentDashboard />}
+        {tab === "bounties" && <Bounties />}
         {tab === "jobs" && <JobMonitor onSelectJob={job => { setSelectedJob(job); setTab("proposal"); }} />}
         {tab === "proposal" && <ProposalGenerator job={selectedJob} />}
         {tab === "pipeline" && <ClientPipeline />}

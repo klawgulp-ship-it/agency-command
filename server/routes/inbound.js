@@ -3,6 +3,7 @@ import db from '../db/connection.js';
 import { v4 as uuid } from 'uuid';
 import { notify } from '../services/notifications.js';
 import { generatePaymentLink } from '../services/payments.js';
+import { generatePortalToken } from './portal.js';
 
 const router = Router();
 
@@ -48,6 +49,9 @@ router.post('/lead', async (req, res) => {
     `Email: ${email}\nBudget: ${budget}\nProject Type: ${project_type}\nSource: ${source}`,
     ref || ''
   );
+
+  // Generate portal token for client
+  const portalToken = generatePortalToken(clientId);
 
   // Track referral conversion
   if (referrer) {
@@ -134,10 +138,13 @@ Keep it under 200 words. Professional but human. Sign off as "SnipeLink LLC".`
 
   console.log(`[INBOUND] New lead: ${name} (${email}) — ${project_type} — ${budget}`);
 
+  const portalUrl = `${req.protocol}://${req.get('host')}/api/portal/page/${portalToken}`;
+
   res.json({
     success: true,
     message: `Thanks ${name}! I'll review your project and get back to you within 24 hours.`,
     quote: quote || null,
+    portal_url: portalUrl,
   });
 });
 
