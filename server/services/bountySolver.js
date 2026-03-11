@@ -781,21 +781,36 @@ export async function syncSubmittedBounties() {
         LIMIT 1
       `).get(`%${owner}/${repo}%`, `%/issues/${issueNumber}%`);
 
-      if (!bounty) continue;
-      if (bounty.status === 'submitted' || bounty.status === 'completed') continue;
-
-      db.prepare(`
-        UPDATE bounties SET
-          status = 'submitted',
-          claimed = 1,
-          submitted = 1,
-          notes = ?,
-          updated_at = datetime('now')
-        WHERE id = ?
-      `).run(`[SYNC] PR: ${pr.html_url}`, bounty.id);
-
-      synced++;
-      console.log(`[SYNC] Restored submitted status for bounty ${bounty.id} — PR: ${pr.html_url}`);
+      if (bounty) {
+        if (bounty.status === 'submitted' || bounty.status === 'completed') continue;
+        db.prepare(`
+          UPDATE bounties SET
+            status = 'submitted',
+            claimed = 1,
+            submitted = 1,
+            notes = ?,
+            updated_at = datetime('now')
+          WHERE id = ?
+        `).run(`[SYNC] PR: ${pr.html_url}`, bounty.id);
+        synced++;
+        console.log(`[SYNC] Restored submitted status for bounty ${bounty.id} — PR: ${pr.html_url}`);
+      } else {
+        // No matching bounty in DB — create one from the PR info
+        const issueUrl = `https://github.com/${owner}/${repo}/issues/${issueNumber}`;
+        const repoFull = `${owner}/${repo}`;
+        // Extract reward from PR body if possible
+        const rewardMatch = body.match(/\$([\d,]+)/);
+        const reward = rewardMatch ? parseInt(rewardMatch[1].replace(/,/g, '')) : 0;
+        const id = `sync-${owner}-${repo}-${issueNumber}`;
+        try {
+          db.prepare(`
+            INSERT OR IGNORE INTO bounties (id, title, source, platform, repo, repo_url, issue_url, reward, currency, labels, skills, description, difficulty, roi_score, est_hours, status, claimed, submitted, notes, external_id)
+            VALUES (?, ?, 'Sync', 'github', ?, ?, ?, ?, 'USD', '[]', '[]', '', 'medium', 50, 2, 'submitted', 1, 1, ?, ?)
+          `).run(id, pr.title, repoFull, `https://github.com/${repoFull}`, issueUrl, reward, `[SYNC] PR: ${pr.html_url}`, `sync-${pr.number}`);
+          synced++;
+          console.log(`[SYNC] Created + marked submitted: ${repoFull}#${issueNumber} — PR: ${pr.html_url}`);
+        } catch (e) { /* already exists */ }
+      }
     }
   } catch (e) {
     console.error('[SYNC] Failed to sync submitted bounties:', e.message);
