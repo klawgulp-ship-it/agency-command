@@ -48,7 +48,7 @@ const CATEGORIES = [
     tags: ['rain sounds', 'sleep', 'relaxation', 'ambient', 'white noise', 'rain for sleeping', 'heavy rain', 'rainfall', 'nature sounds', 'ASMR'],
     audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.7" -af "lowpass=f=800,highpass=f=50,tremolo=f=0.1:d=0.4"`,
     color: { r: 30, g: 40, b: 60 },
-    text: '🌧️ Rain Sounds',
+    text: 'Rain Sounds',
   },
   {
     name: 'thunder',
@@ -62,7 +62,7 @@ const CATEGORIES = [
     tags: ['thunderstorm', 'thunder sounds', 'storm sounds', 'rain and thunder', 'sleep sounds', 'ambient', 'relaxation', 'nature'],
     audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.8" -af "lowpass=f=600,highpass=f=30,tremolo=f=0.05:d=0.7,volume=1.2"`,
     color: { r: 20, g: 25, b: 45 },
-    text: '⛈️ Thunderstorm',
+    text: 'Thunderstorm',
   },
   {
     name: 'ocean',
@@ -76,7 +76,7 @@ const CATEGORIES = [
     tags: ['ocean waves', 'sea sounds', 'beach', 'waves crashing', 'sleep', 'meditation', 'ambient', 'nature sounds', 'relaxation'],
     audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.5" -af "lowpass=f=1200,tremolo=f=0.08:d=0.6,volume=0.9"`,
     color: { r: 15, g: 50, b: 80 },
-    text: '🌊 Ocean Waves',
+    text: 'Ocean Waves',
   },
   {
     name: 'fireplace',
@@ -89,7 +89,7 @@ const CATEGORIES = [
     tags: ['fireplace', 'crackling fire', 'cozy', 'fire sounds', 'sleep', 'relaxation', 'ambient', 'warm'],
     audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.3" -af "highpass=f=200,lowpass=f=4000,tremolo=f=3:d=0.5,volume=0.6"`,
     color: { r: 80, g: 30, b: 10 },
-    text: '🔥 Fireplace',
+    text: 'Fireplace',
   },
   {
     name: 'wind',
@@ -102,7 +102,7 @@ const CATEGORIES = [
     tags: ['wind sounds', 'howling wind', 'nature sounds', 'sleep', 'ambient', 'relaxation', 'winter wind'],
     audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5" -af "lowpass=f=500,tremolo=f=0.03:d=0.8,volume=0.8"`,
     color: { r: 50, g: 55, b: 65 },
-    text: '💨 Wind Sounds',
+    text: 'Wind Sounds',
   },
 ];
 
@@ -142,7 +142,7 @@ async function generateThumbnail(category, hours, outputPath) {
   const width = 1280;
   const height = 720;
 
-  // Create gradient background with text overlay
+  // Create gradient background with text overlay (no emoji — causes Pango crash on Linux/Railway)
   const svg = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -150,15 +150,20 @@ async function generateThumbnail(category, hours, outputPath) {
           <stop offset="0%" style="stop-color:rgb(${category.color.r},${category.color.g},${category.color.b});stop-opacity:1" />
           <stop offset="100%" style="stop-color:rgb(${Math.max(0, category.color.r - 15)},${Math.max(0, category.color.g - 15)},${Math.max(0, category.color.b - 15)});stop-opacity:1" />
         </linearGradient>
+        <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style="stop-color:#14F195;stop-opacity:1" />
+          <stop offset="100%" style="stop-color:#9945FF;stop-opacity:1" />
+        </linearGradient>
         <filter id="glow">
           <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
           <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
       <rect width="${width}" height="${height}" fill="url(#bg)" />
-      <text x="${width / 2}" y="${height / 2 - 60}" font-family="Arial, sans-serif" font-size="120" fill="white" text-anchor="middle" filter="url(#glow)">${category.text}</text>
-      <text x="${width / 2}" y="${height / 2 + 60}" font-family="Arial, sans-serif" font-size="64" fill="rgba(255,255,255,0.9)" text-anchor="middle">${hours} HOURS</text>
-      <text x="${width / 2}" y="${height / 2 + 130}" font-family="Arial, sans-serif" font-size="32" fill="rgba(255,255,255,0.6)" text-anchor="middle">For Sleep &amp; Relaxation</text>
+      <text x="${width / 2}" y="${height / 2 - 80}" font-family="Arial, sans-serif" font-size="100" font-weight="bold" fill="url(#accent)" text-anchor="middle" filter="url(#glow)">${category.text}</text>
+      <text x="${width / 2}" y="${height / 2 + 40}" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle">${hours} HOURS</text>
+      <text x="${width / 2}" y="${height / 2 + 120}" font-family="Arial, sans-serif" font-size="32" fill="rgba(255,255,255,0.5)" text-anchor="middle">For Sleep and Relaxation</text>
+      <text x="${width / 2}" y="${height - 40}" font-family="Arial, sans-serif" font-size="24" fill="rgba(255,255,255,0.3)" text-anchor="middle">SnipeLink Sounds</text>
     </svg>`;
 
   await sharp(Buffer.from(svg))
