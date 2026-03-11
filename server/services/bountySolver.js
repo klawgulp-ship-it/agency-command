@@ -118,6 +118,7 @@ function pickBounties(limit = 3) {
       AND repo != ''
       AND (notes IS NULL OR notes NOT LIKE '%${new Date().toISOString().slice(0,10)}%')
     ORDER BY
+      CASE source WHEN 'Verified' THEN 0 WHEN 'AutoMerge' THEN 1 ELSE 2 END,
       CASE difficulty WHEN 'easy' THEN 0 ELSE 1 END,
       CASE
         WHEN labels LIKE '%typo%' OR title LIKE '%typo%' THEN 0
@@ -376,6 +377,10 @@ async function getRepoMergeSpeed(owner, repo) {
       }
     }
 
+    // If repo has PRs but none merged in last 90 days, skip
+    if (mergedCount === 0 && prs.length > 3) {
+      return { speed: 'dead', avgDays: 999, mergedCount: 0 };
+    }
     if (mergedCount === 0) return { speed: 'unknown', avgDays: 14 }; // PRs exist but none merged — still try
     const avgDays = totalDays / mergedCount;
     const speed = avgDays <= 3 ? 'fast' : avgDays <= 14 ? 'medium' : 'slow';
@@ -511,6 +516,17 @@ async function solveBounty(bounty) {
     return { success: false, reason: 'Blocked repo' };
   }
 
+  // Skip repos that haven't been pushed to in 6+ months
+  const cached = db.prepare("SELECT value FROM settings WHERE key = ?").get(`repo_activity:${bounty.repo}`);
+  if (cached) {
+    try {
+      const activity = JSON.parse(cached.value);
+      if (activity.daysSincePush > 180) {
+        return { success: false, reason: `Dead repo (${activity.daysSincePush}d inactive)` };
+      }
+    } catch (e) {}
+  }
+
   // Extract issue number from URL
   const issueMatch = bounty.issue_url.match(/\/issues\/(\d+)/);
   if (!issueMatch) throw new Error(`Can't extract issue number from ${bounty.issue_url}`);
@@ -551,7 +567,7 @@ async function solveBounty(bounty) {
   // Check repo merge speed — only skip repos with proven slow merge history
   const mergeSpeed = await getRepoMergeSpeed(owner, repo);
   console.log(`[SOLVER] Repo ${bounty.repo} merge speed: ${mergeSpeed.speed} (avg ${mergeSpeed.avgDays}d)`);
-  if (mergeSpeed.speed === 'slow' && mergeSpeed.mergedCount > 0) {
+  if (mergeSpeed.speed === 'slow' || mergeSpeed.speed === 'dead') {
     return { success: false, reason: `Slow merge repo (avg ${mergeSpeed.avgDays}d)` };
   }
 

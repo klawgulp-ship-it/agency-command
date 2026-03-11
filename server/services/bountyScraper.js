@@ -798,12 +798,126 @@ export async function scrapeAutoMergeRepos() {
   return { source: 'AutoMerge', imported: totalImported };
 }
 
+// ─── Verified paying repos — highest priority ──────────
+// ONLY repos with escrowed bounties + proven merge history
+export async function scrapeVerifiedPayingRepos() {
+  const token = process.env.GITHUB_TOKEN;
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'AgencyCommand/1.0',
+  };
+  if (token) headers['Authorization'] = `token ${token}`;
+
+  // These repos have ESCROWED money on Algora and merge PRs actively
+  const verifiedRepos = [
+    // ZIO ecosystem — Scala, well-funded, fast merge, $8K+ in bounties
+    { repo: 'zio/zio', queries: ['label:bounty', '"bounty" "$"'] },
+    { repo: 'zio/zio-schema', queries: ['label:bounty', '"bounty"'] },
+    { repo: 'zio/zio-blocks', queries: ['label:bounty'] },
+    // Twenty — YC-backed CRM, TypeScript, $2,500+ bounties
+    { repo: 'twentyhq/twenty', queries: ['label:bounty', 'label:"💰"', 'label:"💎"'] },
+    // Golem Cloud — Rust/WASM, $3,500+ bounties
+    { repo: 'golemcloud/golem', queries: ['label:bounty', '"bounty"'] },
+    // Deskflow — C++/Qt, $7,500+ in bounties
+    { repo: 'deskflow/deskflow', queries: ['label:bounty', '"bounty"'] },
+    // Hummingbot — Python, crypto trading, consistent payer
+    { repo: 'hummingbot/hummingbot', queries: ['label:bounty'] },
+    // Trigger.dev — TypeScript, YC-backed
+    { repo: 'triggerdotdev/trigger.dev', queries: ['label:bounty', '"bounty"'] },
+    // Formbricks — TypeScript, open-source surveys
+    { repo: 'formbricks/formbricks', queries: ['label:bounty'] },
+    // Infisical — TypeScript, secrets management, well-funded
+    { repo: 'Infisical/infisical', queries: ['label:bounty'] },
+    // Documenso — TypeScript, open-source DocuSign
+    { repo: 'documenso/documenso', queries: ['label:bounty'] },
+    // Cal.com — TypeScript, scheduling, very active
+    { repo: 'calcom/cal.com', queries: ['label:bounty'] },
+  ];
+
+  let totalImported = 0;
+
+  for (const { repo, queries } of verifiedRepos) {
+    for (const q of queries) {
+      try {
+        const fullQuery = `repo:${repo} state:open ${q}`;
+        const url = `${GITHUB_API}/search/issues?q=${encodeURIComponent(fullQuery)}&sort=created&order=desc&per_page=30`;
+        const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+
+        if (!res.ok) {
+          if (res.status === 403) break; // rate limited
+          continue;
+        }
+
+        const data = await res.json();
+        for (const issue of (data.items || [])) {
+          const issueUrl = issue.html_url;
+          if (isDuplicateBounty(issueUrl)) continue;
+
+          const labels = (issue.labels || []).map(l => l.name || l);
+          const repoUrl = `https://github.com/${repo}`;
+          const body = (issue.body || '').slice(0, 3000);
+
+          if (isBlockedOrg(repo)) continue;
+
+          let reward = extractRewardFromLabels(issue.labels || []);
+          if (!reward) reward = extractRewardFromText(body);
+          if (!reward) continue;
+
+          const tokenPattern = /\b(RTC|FL0X|POINTS|XP|TOKEN)\b/i;
+          if (tokenPattern.test(issue.title) && !body.includes('$')) continue;
+
+          const fullText = `${issue.title} ${body} ${labels.join(' ')}`;
+          const skills = extractSkills(fullText);
+          const difficulty = estimateDifficulty(issue.title, body, labels);
+          const estHours = estimateHours(difficulty);
+
+          const bounty = {
+            id: uuid(),
+            title: issue.title,
+            source: 'Verified',
+            platform: 'github',
+            repo: repo,
+            repo_url: repoUrl,
+            issue_url: issueUrl,
+            reward,
+            currency: 'USD',
+            labels: JSON.stringify(labels),
+            skills: JSON.stringify(skills),
+            description: body.slice(0, 2000),
+            difficulty,
+            est_hours: estHours,
+            external_id: `ver-${issue.id}`,
+          };
+
+          // +20 ROI bonus — these are verified payers with escrowed money
+          bounty.roi_score = scoreBounty(bounty) + 20;
+
+          insertBounty.run(
+            bounty.id, bounty.title, bounty.source, bounty.platform,
+            bounty.repo, bounty.repo_url, bounty.issue_url, bounty.reward,
+            bounty.currency, bounty.labels, bounty.skills, bounty.description,
+            bounty.difficulty, bounty.roi_score, bounty.est_hours, bounty.external_id
+          );
+          totalImported++;
+        }
+
+        await new Promise(r => setTimeout(r, 1000));
+      } catch (err) {
+        console.error(`[BOUNTY] Verified search failed for ${repo}:`, err.message);
+      }
+    }
+  }
+
+  return { source: 'Verified', imported: totalImported };
+}
+
 // ─── Main: Scrape all bounty sources ────────────────────
 export async function scrapeAllBounties() {
   console.log('[BOUNTY] Scraping all bounty sources...');
   const results = [];
 
   const settled = await Promise.allSettled([
+    scrapeVerifiedPayingRepos(),
     scrapeGitHubBounties(),
     scrapeAlgoraBounties(),
     scrapeIssueHuntBounties(),
@@ -814,7 +928,7 @@ export async function scrapeAllBounties() {
     scrapeAutoMergeRepos(),
   ]);
 
-  const sourceNames = ['GitHub', 'Algora', 'IssueHunt', 'Boss.dev/Opire', 'Gitcoin', 'OSS-Bounty', 'Fresh', 'AutoMerge'];
+  const sourceNames = ['Verified', 'GitHub', 'Algora', 'IssueHunt', 'Boss.dev/Opire', 'Gitcoin', 'OSS-Bounty', 'Fresh', 'AutoMerge'];
   for (let i = 0; i < settled.length; i++) {
     if (settled[i].status === 'fulfilled') results.push(settled[i].value);
     else console.error(`[BOUNTY] ${sourceNames[i]} failed:`, settled[i].reason?.message);
