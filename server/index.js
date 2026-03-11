@@ -29,6 +29,7 @@ import { runAutoBidder } from './services/freelanceBidder.js';
 import { runSecurityScanner } from './services/securityScanner.js';
 import { runMarketingAgent } from './services/marketingAgent.js';
 import { runSocialAgent } from './services/socialAgent.js';
+import { runGiveawayAgent } from './services/giveawayAgent.js';
 import { runYouTubeAgent, getYouTubeOAuthUrl, exchangeYouTubeCode } from './services/youtubeAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 import { setupToolRoutes } from './services/microSaasEngine.js';
@@ -238,6 +239,15 @@ cron.schedule('0 */2 * * *', async () => {
     const actions = result.uploaded + result.comments + result.replies;
     if (actions > 0) console.log(`[CRON] YouTube: ${result.uploaded} uploaded, ${result.comments} comments, ${result.replies} replies`);
   } catch (e) { console.error('[CRON] YouTube agent failed:', e.message); }
+});
+
+// ─── Cron: Giveaway agent every 3 hours ─────────────────
+cron.schedule('30 */3 * * *', async () => {
+  console.log('[CRON] Running giveaway agent...');
+  try {
+    const result = await runGiveawayAgent();
+    console.log(`[CRON] Giveaway: ${result.giveaway?.status || 'none'}, ${result.entries} entries, ${result.engaged} engagements`);
+  } catch (e) { console.error('[CRON] Giveaway agent failed:', e.message); }
 });
 
 // ─── Cron: Check overdue invoices daily at 9am ──────────
