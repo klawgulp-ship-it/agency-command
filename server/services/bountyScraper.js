@@ -694,6 +694,110 @@ export async function scrapeFreshBounties() {
   return { source: 'Fresh', imported: totalImported };
 }
 
+// ─── Auto-merge repo hunter ─────────────────────────────
+// Repos with auto-merge bots = instant money if CI passes
+export async function scrapeAutoMergeRepos() {
+  const token = process.env.GITHUB_TOKEN;
+  const headers = {
+    'Accept': 'application/vnd.github.v3+json',
+    'User-Agent': 'AgencyCommand/1.0',
+  };
+  if (token) headers['Authorization'] = `token ${token}`;
+
+  // Search for bounty issues in repos that have mergify or auto-merge configs
+  const queries = [
+    'label:bounty state:open "auto-merge" in:readme',
+    'label:bounty state:open filename:.mergify.yml',
+    'label:bounty state:open "mergify" in:comments',
+    'label:bounty "$" state:open label:auto-merge',
+    // Repos known to have auto-merge + bounties
+    'repo:ghostfolio/ghostfolio label:bounty state:open',
+    'repo:trigger-dev/trigger.dev label:bounty state:open',
+    'repo:refinedev/refine label:bounty state:open',
+    'repo:medusajs/medusa label:bounty state:open',
+    'repo:nhost/nhost label:bounty state:open',
+    'repo:supabase/supabase label:bounty state:open',
+  ];
+
+  let totalImported = 0;
+
+  for (const q of queries) {
+    try {
+      const url = `${GITHUB_API}/search/issues?q=${encodeURIComponent(q)}&sort=created&order=desc&per_page=30`;
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(15000) });
+
+      if (!res.ok) {
+        if (res.status === 403) {
+          console.log('[BOUNTY] GitHub rate limited on auto-merge search');
+          break;
+        }
+        continue;
+      }
+
+      const data = await res.json();
+      for (const issue of (data.items || [])) {
+        const issueUrl = issue.html_url;
+        if (isDuplicateBounty(issueUrl)) continue;
+
+        const labels = (issue.labels || []).map(l => l.name || l);
+        const repoUrl = issue.repository_url?.replace('https://api.github.com/repos/', 'https://github.com/') || '';
+        const repoName = repoUrl.split('github.com/')[1] || '';
+
+        if (isBlockedOrg(repoName)) continue;
+
+        const body = (issue.body || '').slice(0, 3000);
+        let reward = extractRewardFromLabels(issue.labels || []);
+        if (!reward) reward = extractRewardFromText(body);
+        if (!reward) continue;
+
+        // Skip token bounties
+        const tokenPattern = /\b(RTC|FL0X|POINTS|XP|TOKEN)\b/i;
+        if (tokenPattern.test(issue.title) && !body.includes('$')) continue;
+        if (body.toLowerCase().includes('not accepting bounties')) continue;
+
+        const fullText = `${issue.title} ${body} ${labels.join(' ')}`;
+        const skills = extractSkills(fullText);
+        const difficulty = estimateDifficulty(issue.title, body, labels);
+        const estHours = estimateHours(difficulty);
+
+        const bounty = {
+          id: uuid(),
+          title: issue.title,
+          source: 'AutoMerge',
+          platform: 'github',
+          repo: repoName,
+          repo_url: repoUrl,
+          issue_url: issueUrl,
+          reward,
+          currency: 'USD',
+          labels: JSON.stringify(labels),
+          skills: JSON.stringify(skills),
+          description: body.slice(0, 2000),
+          difficulty,
+          est_hours: estHours,
+          external_id: `am-${issue.id}`,
+        };
+
+        bounty.roi_score = scoreBounty(bounty) + 15; // Bonus score for auto-merge repos
+
+        insertBounty.run(
+          bounty.id, bounty.title, bounty.source, bounty.platform,
+          bounty.repo, bounty.repo_url, bounty.issue_url, bounty.reward,
+          bounty.currency, bounty.labels, bounty.skills, bounty.description,
+          bounty.difficulty, bounty.roi_score, bounty.est_hours, bounty.external_id
+        );
+        totalImported++;
+      }
+
+      await new Promise(r => setTimeout(r, 1500));
+    } catch (err) {
+      console.error(`[BOUNTY] Auto-merge search failed:`, err.message);
+    }
+  }
+
+  return { source: 'AutoMerge', imported: totalImported };
+}
+
 // ─── Main: Scrape all bounty sources ────────────────────
 export async function scrapeAllBounties() {
   console.log('[BOUNTY] Scraping all bounty sources...');
@@ -707,9 +811,10 @@ export async function scrapeAllBounties() {
     scrapeGitcoinBounties(),
     scrapeOSSBounties(),
     scrapeFreshBounties(),
+    scrapeAutoMergeRepos(),
   ]);
 
-  const sourceNames = ['GitHub', 'Algora', 'IssueHunt', 'Boss.dev/Opire', 'Gitcoin', 'OSS-Bounty', 'Fresh'];
+  const sourceNames = ['GitHub', 'Algora', 'IssueHunt', 'Boss.dev/Opire', 'Gitcoin', 'OSS-Bounty', 'Fresh', 'AutoMerge'];
   for (let i = 0; i < settled.length; i++) {
     if (settled[i].status === 'fulfilled') results.push(settled[i].value);
     else console.error(`[BOUNTY] ${sourceNames[i]} failed:`, settled[i].reason?.message);

@@ -25,6 +25,8 @@ import { runAutoSolver, runBlitzSolver, checkSubmittedBounties, syncSubmittedBou
 import { scrapeAllBounties } from './services/bountyScraper.js';
 import { checkPRReviews } from './services/prResponder.js';
 import { runAutoAgent } from './services/autoAgent.js';
+import { runAutoBidder } from './services/freelanceBidder.js';
+import { runSecurityScanner } from './services/securityScanner.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 
 // Run seed on first boot if DB is empty
@@ -115,8 +117,8 @@ cron.schedule('*/30 * * * *', async () => {
   } catch (e) { console.error('[CRON] Auto-agent failed:', e.message); }
 });
 
-// ─── Cron: Bounty solver every 10 min ─────────────────────
-cron.schedule('*/10 * * * *', async () => {
+// ─── Cron: Bounty solver every 5 min (max throughput) ─────
+cron.schedule('*/5 * * * *', async () => {
   console.log('[CRON] Running bounty solver...');
   try {
     const result = await runAutoSolver();
@@ -146,6 +148,24 @@ cron.schedule('5,15,25,35,45,55 * * * *', async () => {
     const result = await checkPRReviews();
     if (result.responded > 0) console.log(`[CRON] PR responder: ${result.responded} reviews addressed`);
   } catch (e) { console.error('[CRON] PR responder failed:', e.message); }
+});
+
+// ─── Cron: Freelance auto-bidder every 20 min ────────────
+cron.schedule('3,23,43 * * * *', async () => {
+  console.log('[CRON] Running freelance auto-bidder...');
+  try {
+    const result = await runAutoBidder();
+    if (result.bidsSubmitted > 0) console.log(`[CRON] Bidder: ${result.bidsSubmitted} bids on ${result.gigsFound} gigs`);
+  } catch (e) { console.error('[CRON] Bidder failed:', e.message); }
+});
+
+// ─── Cron: Security bounty scanner every 30 min ─────────
+cron.schedule('10,40 * * * *', async () => {
+  console.log('[CRON] Running security scanner...');
+  try {
+    const result = await runSecurityScanner();
+    if (result.findings > 0) console.log(`[CRON] Security: ${result.findings} findings, ${result.reported} reported`);
+  } catch (e) { console.error('[CRON] Security scanner failed:', e.message); }
 });
 
 // ─── Cron: Check overdue invoices daily at 9am ──────────

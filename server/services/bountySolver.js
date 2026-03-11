@@ -636,12 +636,12 @@ export async function runAutoSolver() {
   const log = [];
   let solved = 0;
 
-  // Pick top solvable bounties — 5 per cycle
-  const bounties = pickBounties(5);
+  // Pick top solvable bounties — 15 per cycle, max throughput
+  const bounties = pickBounties(15);
   log.push(`[SOLVER] Found ${bounties.length} candidate bounties`);
 
-  // Solve in parallel batches of 3
-  const batchSize = 3;
+  // Solve in parallel batches of 5
+  const batchSize = 5;
   for (let i = 0; i < bounties.length; i += batchSize) {
     const batch = bounties.slice(i, i + batchSize);
     const results = await Promise.allSettled(
