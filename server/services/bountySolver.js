@@ -104,7 +104,7 @@ async function askClaude(prompt, maxTokens = 4096, model = 'claude-sonnet-4-6') 
 
 // Cheap + fast for screening, Sonnet for actual fixes
 const askHaiku = (prompt, maxTokens = 1024) => askClaude(prompt, maxTokens, 'claude-haiku-4-5-20251001');
-const askSonnet = (prompt, maxTokens = 8192) => askClaude(prompt, maxTokens, 'claude-sonnet-4-6');
+const askSonnet = (prompt, maxTokens = 16384) => askClaude(prompt, maxTokens, 'claude-sonnet-4-6');
 
 // ─── Step 1: Pick best solvable bounties ────────────────
 function pickBounties(limit = 3) {
@@ -116,6 +116,13 @@ function pickBounties(limit = 3) {
       AND difficulty IN ('easy', 'medium')
       AND reward >= 25
       AND repo != ''
+      AND (
+        skills LIKE '%typescript%' OR skills LIKE '%javascript%' OR skills LIKE '%python%'
+        OR skills LIKE '%node%' OR skills LIKE '%react%' OR skills LIKE '%next%'
+        OR skills LIKE '%express%' OR skills LIKE '%css%' OR skills LIKE '%tailwind%'
+        OR labels LIKE '%documentation%' OR labels LIKE '%docs%' OR labels LIKE '%typo%'
+        OR difficulty = 'easy'
+      )
       AND (notes IS NULL OR notes NOT LIKE '%${new Date().toISOString().slice(0,10)}%')
     ORDER BY
       CASE source WHEN 'Verified' THEN 0 WHEN 'AutoMerge' THEN 1 ELSE 2 END,
@@ -230,7 +237,7 @@ Analyze this issue and determine:
 IMPORTANT: Only say "yes" if this is clearly solvable from the information provided. If it requires access to a database, external service, or extensive architectural knowledge you don't have, say "no".
 
 Respond in this exact JSON format:
-{"solvable": true/false, "files": ["path/to/file1.ts", "path/to/file2.ts"], "fix_type": "bug_fix", "confidence": "high", "description": "Brief fix description"}`;
+{"solvable": true/false, "files": ["path/to/file1.ts", "path/to/file2.ts"], "fix_type": "bug_fix", "confidence": "high", "description": "Brief fix description", "language": "typescript"}`;
 
   const analysis = await askHaiku(analysisPrompt, 1024);
 
@@ -239,7 +246,17 @@ Respond in this exact JSON format:
   if (!jsonMatch) return { solvable: false, reason: 'Failed to parse analysis' };
 
   try {
-    return JSON.parse(jsonMatch[0]);
+    const analysis = JSON.parse(jsonMatch[0]);
+
+    // Skip languages we can't write quality code for
+    const weakLanguages = ['scala', 'rust', 'c++', 'c', 'java', 'kotlin', 'swift', 'objective-c', 'haskell', 'elixir', 'clojure'];
+    const detectedLang = (analysis.language || '').toLowerCase();
+    if (weakLanguages.includes(detectedLang) && bounty.difficulty !== 'easy') {
+      console.log(`[SOLVER] Skipping — language ${detectedLang} not in our core stack`);
+      return { solvable: false, reason: `Language ${detectedLang} — not our core stack` };
+    }
+
+    return analysis;
   } catch (e) {
     return { solvable: false, reason: 'Invalid JSON in analysis' };
   }
@@ -271,6 +288,11 @@ CRITICAL JSON RULES:
 - Keep file content SHORT — only include the necessary code
 - If a file would be very large (>200 lines), break it into smaller focused files
 
+CRITICAL: If a file would be longer than 150 lines, DO NOT include the full content.
+Instead, show ONLY the changed functions/sections with 3 lines of surrounding context.
+Use a comment like "// ... rest of file unchanged ..." for skipped sections.
+This prevents truncation which causes the quality gate to reject your fix.
+
 Respond in this exact JSON format:
 {
   "changes": [
@@ -296,7 +318,7 @@ RULES:
   const useHaiku = bounty.difficulty === 'easy';
   const result = useHaiku
     ? await askHaiku(fixPrompt, 8192)
-    : await askSonnet(fixPrompt, 16384);
+    : await askSonnet(fixPrompt, 32000);
 
   const jsonMatch = result.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error('Failed to parse fix');
