@@ -12,7 +12,7 @@ const router = Router();
 router.get('/', (req, res) => {
   const { status = 'open', sort = 'roi_score', limit = 50, difficulty, min_reward } = req.query;
 
-  let sql = 'SELECT * FROM bounties WHERE 1=1';
+  let sql = "SELECT * FROM bounties WHERE repo NOT LIKE '1712n/%' AND repo NOT LIKE 'CapSoftware/%'";
   const params = [];
 
   if (status !== 'all') {
