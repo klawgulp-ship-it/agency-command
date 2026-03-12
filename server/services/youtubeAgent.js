@@ -391,25 +391,61 @@ function generateVideo(category, durationSecs, outputPath) {
     return true;
   } catch (e) {
     console.error('[YouTube] ffmpeg layered failed:', e.message?.slice(0, 300));
-    // Fallback: simple brown noise + vignette (no binaural)
+    // Mid-tier fallback: 3 audio layers + binaural + simpler visuals (still quality)
     try {
       const { r, g, b } = category.color;
       const colorHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-      const fallbackCmd = `ffmpeg -y \
-        -f lavfi -i "color=c=0x${colorHex}:s=1280x720:r=24:d=${durationSecs}" \
-        -f lavfi -i "anoisesrc=d=${durationSecs}:c=brown:r=44100:a=0.6" \
-        -filter_complex "[0:v]noise=alls=20:allf=t,vignette=PI/4[v]" \
-        -map "[v]" -map 1:a \
-        -af "lowpass=f=800,highpass=f=40" \
+      const inputs = category.audio_inputs(durationSecs);
+      // Use first 3 audio + binaural pair (last 2)
+      const midInputs = [inputs[0], inputs[1], inputs[2], inputs[inputs.length - 2], inputs[inputs.length - 1]].join(' ');
+      const midCmd = `ffmpeg -y \
+        ${midInputs} \
+        -filter_complex "\
+          color=c=0x${colorHex}:s=1280x720:r=24:d=${durationSecs},noise=alls=20:allf=t[base];\
+          color=c=black:s=1280x720:r=24:d=${durationSecs},noise=alls=60:allf=t,eq=brightness=-0.5[drops];\
+          [drops]boxblur=0:0:0:4,scroll=vertical=0.05:horizontal=0[rain];\
+          [base][rain]blend=all_mode=screen:all_opacity=0.12[vid];\
+          [vid]eq=brightness=0.01*sin(2*PI*t/40):eval=frame[breathe];\
+          [breathe]vignette=PI/4[vout];\
+          [0:a]lowpass=f=700,highpass=f=35,volume=0.7[a0];\
+          [1:a]highpass=f=1800,lowpass=f=6000,volume=0.2[a1];\
+          [2:a]highpass=f=5000,volume=0.06[a2];\
+          [3:a]volume=0.012[left];[4:a]volume=0.012[right];\
+          [left][right]join=inputs=2:channel_layout=stereo[bin];\
+          [a0][a1]amix=inputs=2:weights=1 0.3[mx1];\
+          [mx1][a2]amix=inputs=2:weights=1 0.2[mx2];\
+          [mx2][bin]amix=inputs=2:weights=1 0.08[aout]" \
+        -map "[vout]" -map "[aout]" \
         -c:v libx264 -preset fast -crf 23 \
-        -c:a aac -b:a 192k \
-        -shortest \
+        -c:a aac -b:a 192k -ac 2 \
+        -t ${durationSecs} -shortest \
         "${outputPath}" 2>&1`;
-      execSync(fallbackCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
+      console.log('[YouTube] Trying mid-tier fallback (3 layers + binaural)...');
+      execSync(midCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
       return true;
     } catch (e2) {
-      console.error('[YouTube] ffmpeg fallback also failed:', e2.message?.slice(0, 300));
-      return false;
+      console.error('[YouTube] Mid-tier failed:', e2.message?.slice(0, 300));
+      // Bare minimum: single noise + simple visual
+      try {
+        const { r, g, b } = category.color;
+        const colorHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        const bareCmd = `ffmpeg -y \
+          -f lavfi -i "color=c=0x${colorHex}:s=1280x720:r=24:d=${durationSecs}" \
+          -f lavfi -i "anoisesrc=d=${durationSecs}:c=brown:r=44100:a=0.6" \
+          -filter_complex "[0:v]noise=alls=20:allf=t,vignette=PI/4[v]" \
+          -map "[v]" -map 1:a \
+          -af "lowpass=f=800,highpass=f=40" \
+          -c:v libx264 -preset fast -crf 23 \
+          -c:a aac -b:a 192k \
+          -shortest \
+          "${outputPath}" 2>&1`;
+        console.log('[YouTube] Trying bare minimum fallback...');
+        execSync(bareCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
+        return true;
+      } catch (e3) {
+        console.error('[YouTube] All ffmpeg attempts failed:', e3.message?.slice(0, 300));
+        return false;
+      }
     }
   }
 }
