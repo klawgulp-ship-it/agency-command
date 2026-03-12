@@ -59,8 +59,8 @@ function trackPost(platform, actionType, target, content, status = 'posted') {
 }
 
 function getPostCountToday(platform) {
-  // Only count actual content posts (tweets, posts, messages) — NOT engagement actions (likes, follows, RTs)
-  const row = db.prepare(`SELECT COUNT(*) as c FROM social_posts WHERE platform = ? AND created_at > datetime('now', '-1 day') AND status = 'posted' AND action_type NOT IN ('engagement', 'like', 'follow', 'retweet')`).get(platform);
+  // Count only actual content posts since midnight UTC — NOT engagement actions
+  const row = db.prepare(`SELECT COUNT(*) as c FROM social_posts WHERE platform = ? AND created_at > date('now') AND status = 'posted' AND action_type NOT IN ('engagement', 'like', 'follow', 'retweet')`).get(platform);
   return row?.c || 0;
 }
 
@@ -641,8 +641,8 @@ async function runX() {
   }
 
   const todayCount = getPostCountToday('x');
-  console.log(`[X] Today's tweet count: ${todayCount}/12`);
-  if (todayCount >= 12) { results.errors.push('Daily limit reached'); return results; }
+  console.log(`[X] Today's tweet count: ${todayCount}/24`);
+  if (todayCount >= 24) { results.errors.push('Daily limit reached'); return results; }
 
   // Always use queued content first — it's pre-written and clean
   const queued = getQueuedContent('x');
