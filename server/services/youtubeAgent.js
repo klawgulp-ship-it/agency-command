@@ -234,7 +234,7 @@ function generateVideo(category, durationSecs, outputPath) {
     "${outputPath}" 2>&1`;
 
   try {
-    execSync(fullCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
+    execSync(fullCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
     return true;
   } catch (e) {
     console.error('[YouTube] ffmpeg animated failed:', e.message?.slice(0, 300));
@@ -252,7 +252,7 @@ function generateVideo(category, durationSecs, outputPath) {
         -c:a aac -b:a 192k \
         -shortest \
         "${outputPath}" 2>&1`;
-      execSync(fallbackCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
+      execSync(fallbackCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
       return true;
     } catch (e2) {
       console.error('[YouTube] ffmpeg fallback also failed:', e2.message?.slice(0, 300));
@@ -484,7 +484,7 @@ export async function runYouTubeAgent() {
 
   if (hoursSinceUpload >= 24) {
     const category = CATEGORIES[state.categoryIndex % CATEGORIES.length];
-    const hours = [1, 2, 3, 8, 10][Math.floor(Math.random() * 5)];
+    const hours = [1, 2, 3][Math.floor(Math.random() * 3)];
     const durationSecs = hours * 3600;
 
     const titleTemplate = category.title_templates[Math.floor(Math.random() * category.title_templates.length)];
@@ -502,7 +502,7 @@ export async function runYouTubeAgent() {
 
       // Generate video (this takes a while for long durations)
       // For Railway, cap at 1h to avoid timeout — longer videos for local
-      const maxDuration = process.env.RAILWAY_ENVIRONMENT ? 3600 : durationSecs;
+      const maxDuration = process.env.RAILWAY_ENVIRONMENT ? 3600 : Math.min(durationSecs, 10800);
       const actualHours = maxDuration / 3600;
       const actualTitle = titleTemplate.replace('{hours}', actualHours);
       const actualDesc = description.replace(/{hours}/g, actualHours);
