@@ -355,97 +355,109 @@ const VISUAL_EFFECTS = {
 };
 
 // ─── Generate Audio/Video ─────────────────────────────────
+// Strategy: Generate a 60s video loop + full-length audio separately, then mux.
+// This is 60x faster than rendering the full duration with effects and is how
+// professional ambient channels work — the visual loops seamlessly.
 function generateVideo(category, durationSecs, outputPath) {
-  const chunkSecs = Math.min(durationSecs, 600);
-  const visualFilter = VISUAL_EFFECTS[category.name](durationSecs);
-
-  // Multi-layered audio with binaural beats + animated visuals
-  const audioInputs = category.audio_inputs(chunkSecs).join(' ');
-  const loopCount = Math.ceil(durationSecs / chunkSecs);
-  const loopSize = chunkSecs * 44100;
-
-  // Add aloop to each audio stream for looping short chunks to full duration
-  let audioFilterComplex = category.audio_filter_complex;
-  for (let i = 0; i < 10; i++) {
-    audioFilterComplex = audioFilterComplex.replace(
-      new RegExp(`\\[${i}:a\\]`, 'g'),
-      `[${i}:a]aloop=loop=${loopCount}:size=${loopSize},`
-    );
-  }
-
-  // Combine visual (lavfi color sources) + audio (file inputs) in one filter_complex
-  const combinedFilter = `${visualFilter};\n    ${audioFilterComplex}`;
-
-  const fullCmd = `ffmpeg -y \
-    ${audioInputs} \
-    -filter_complex "${combinedFilter}" \
-    -map "[vout]" -map "[aout]" \
-    -c:v libx264 -preset fast -crf 23 \
-    -c:a aac -b:a 192k -ac 2 \
-    -t ${durationSecs} \
-    -shortest \
-    "${outputPath}" 2>&1`;
+  const dir = dirname(outputPath);
+  const videoLoop = join(dir, `${category.name}-loop.mp4`);
+  const audioFile = join(dir, `${category.name}-audio.m4a`);
+  const LOOP_SECS = 60; // 60s visual loop — seamless for ambient noise visuals
 
   try {
-    execSync(fullCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
+    // Step 1: Generate 60s video loop with full visual effects
+    console.log(`[YouTube] Step 1/3: Generating ${LOOP_SECS}s video loop...`);
+    const visualFilter = VISUAL_EFFECTS[category.name](LOOP_SECS);
+    const videoCmd = `ffmpeg -y \
+      -filter_complex "${visualFilter}" \
+      -map "[vout]" \
+      -c:v libx264 -preset fast -crf 23 \
+      -t ${LOOP_SECS} \
+      "${videoLoop}" 2>&1`;
+    execSync(videoCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
+    console.log('[YouTube] Video loop generated');
+
+    // Step 2: Generate full-length audio (7 layers + binaural)
+    console.log(`[YouTube] Step 2/3: Generating ${durationSecs}s audio (7 layers + binaural)...`);
+    const audioInputs = category.audio_inputs(durationSecs).join(' ');
+    const audioCmd = `ffmpeg -y \
+      ${audioInputs} \
+      -filter_complex "${category.audio_filter_complex}" \
+      -map "[aout]" \
+      -c:a aac -b:a 192k -ac 2 \
+      -t ${durationSecs} \
+      "${audioFile}" 2>&1`;
+    execSync(audioCmd, { timeout: 1200000, maxBuffer: 50 * 1024 * 1024 });
+    console.log('[YouTube] Audio generated');
+
+    // Step 3: Mux looped video + audio into final file
+    console.log('[YouTube] Step 3/3: Muxing video loop + audio...');
+    const loopCount = Math.ceil(durationSecs / LOOP_SECS);
+    const muxCmd = `ffmpeg -y \
+      -stream_loop ${loopCount} -i "${videoLoop}" \
+      -i "${audioFile}" \
+      -map 0:v -map 1:a \
+      -c:v copy -c:a copy \
+      -t ${durationSecs} \
+      -shortest \
+      "${outputPath}" 2>&1`;
+    execSync(muxCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+    console.log('[YouTube] Final video muxed');
+
+    // Cleanup intermediates
+    try { unlinkSync(videoLoop); } catch {}
+    try { unlinkSync(audioFile); } catch {}
     return true;
   } catch (e) {
-    console.error('[YouTube] ffmpeg layered failed:', e.message?.slice(0, 300));
-    // Mid-tier fallback: 3 audio layers + binaural + simpler visuals (still quality)
+    console.error('[YouTube] Multi-step generation failed:', e.message?.slice(0, 300));
+    // Cleanup intermediates on failure
+    try { unlinkSync(videoLoop); } catch {}
+    try { unlinkSync(audioFile); } catch {}
+
+    // Fallback: simple visuals + 3 audio layers (still has binaural)
     try {
+      console.log('[YouTube] Trying simplified fallback...');
       const { r, g, b } = category.color;
       const colorHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
       const inputs = category.audio_inputs(durationSecs);
-      // Use first 3 audio + binaural pair (last 2)
-      const midInputs = [inputs[0], inputs[1], inputs[2], inputs[inputs.length - 2], inputs[inputs.length - 1]].join(' ');
-      const midCmd = `ffmpeg -y \
-        ${midInputs} \
+      const fbInputs = [inputs[0], inputs[inputs.length - 2], inputs[inputs.length - 1]].join(' ');
+
+      // Generate simple video loop
+      const fbVideoCmd = `ffmpeg -y \
+        -f lavfi -i "color=c=0x${colorHex}:s=1280x720:r=24:d=${LOOP_SECS}" \
+        -filter_complex "[0:v]noise=alls=20:allf=t,vignette=PI/4[vout]" \
+        -map "[vout]" -c:v libx264 -preset ultrafast -crf 25 \
+        -t ${LOOP_SECS} "${videoLoop}" 2>&1`;
+      execSync(fbVideoCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+
+      // Generate audio with main noise + binaural
+      const fbAudioCmd = `ffmpeg -y \
+        ${fbInputs} \
         -filter_complex "\
-          color=c=0x${colorHex}:s=1280x720:r=24:d=${durationSecs},noise=alls=20:allf=t[base];\
-          color=c=black:s=1280x720:r=24:d=${durationSecs},noise=alls=60:allf=t,eq=brightness=-0.5[drops];\
-          [drops]boxblur=0:0:0:4,scroll=vertical=0.05:horizontal=0[rain];\
-          [base][rain]blend=all_mode=screen:all_opacity=0.12[vid];\
-          [vid]eq=brightness=0.01*sin(2*PI*t/40):eval=frame[breathe];\
-          [breathe]vignette=PI/4[vout];\
-          [0:a]lowpass=f=700,highpass=f=35,volume=0.7[a0];\
-          [1:a]highpass=f=1800,lowpass=f=6000,volume=0.2[a1];\
-          [2:a]highpass=f=5000,volume=0.06[a2];\
-          [3:a]volume=0.012[left];[4:a]volume=0.012[right];\
+          [0:a]lowpass=f=700,highpass=f=35,volume=0.7[main];\
+          [1:a]volume=0.012[left];[2:a]volume=0.012[right];\
           [left][right]join=inputs=2:channel_layout=stereo[bin];\
-          [a0][a1]amix=inputs=2:weights=1 0.3[mx1];\
-          [mx1][a2]amix=inputs=2:weights=1 0.2[mx2];\
-          [mx2][bin]amix=inputs=2:weights=1 0.08[aout]" \
-        -map "[vout]" -map "[aout]" \
-        -c:v libx264 -preset fast -crf 23 \
-        -c:a aac -b:a 192k -ac 2 \
-        -t ${durationSecs} -shortest \
-        "${outputPath}" 2>&1`;
-      console.log('[YouTube] Trying mid-tier fallback (3 layers + binaural)...');
-      execSync(midCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
+          [main][bin]amix=inputs=2:weights=1 0.08[aout]" \
+        -map "[aout]" -c:a aac -b:a 192k -ac 2 \
+        -t ${durationSecs} "${audioFile}" 2>&1`;
+      execSync(fbAudioCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
+
+      // Mux
+      const fbMuxCmd = `ffmpeg -y \
+        -stream_loop ${Math.ceil(durationSecs / LOOP_SECS)} -i "${videoLoop}" \
+        -i "${audioFile}" \
+        -map 0:v -map 1:a -c:v copy -c:a copy \
+        -t ${durationSecs} -shortest "${outputPath}" 2>&1`;
+      execSync(fbMuxCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+
+      try { unlinkSync(videoLoop); } catch {}
+      try { unlinkSync(audioFile); } catch {}
       return true;
     } catch (e2) {
-      console.error('[YouTube] Mid-tier failed:', e2.message?.slice(0, 300));
-      // Bare minimum: single noise + simple visual
-      try {
-        const { r, g, b } = category.color;
-        const colorHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-        const bareCmd = `ffmpeg -y \
-          -f lavfi -i "color=c=0x${colorHex}:s=1280x720:r=24:d=${durationSecs}" \
-          -f lavfi -i "anoisesrc=d=${durationSecs}:c=brown:r=44100:a=0.6" \
-          -filter_complex "[0:v]noise=alls=20:allf=t,vignette=PI/4[v]" \
-          -map "[v]" -map 1:a \
-          -af "lowpass=f=800,highpass=f=40" \
-          -c:v libx264 -preset fast -crf 23 \
-          -c:a aac -b:a 192k \
-          -shortest \
-          "${outputPath}" 2>&1`;
-        console.log('[YouTube] Trying bare minimum fallback...');
-        execSync(bareCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
-        return true;
-      } catch (e3) {
-        console.error('[YouTube] All ffmpeg attempts failed:', e3.message?.slice(0, 300));
-        return false;
-      }
+      console.error('[YouTube] Fallback also failed:', e2.message?.slice(0, 300));
+      try { unlinkSync(videoLoop); } catch {}
+      try { unlinkSync(audioFile); } catch {}
+      return false;
     }
   }
 }
