@@ -317,15 +317,15 @@ async function closeExpiredGiveaways() {
 async function engageTrendingCrypto() {
   if (!process.env.X_API_KEY) return 0;
 
+  // Quality-filtered queries — block spam/scam/NSFW
+  const BLOCK = '-pig -pigs -findom -finsub -cashslave -paypig -slave -tribute -goddess -mistress -domme -nsfw -porn -xxx -onlyfans -scam -rug -honeypot';
   const queries = [
-    'solana airdrop',
-    'free crypto giveaway',
-    'SOL giveaway',
-    'solana token launch',
-    '$SOL free',
-    'crypto community',
-    'solana ecosystem',
-    'meme coin solana',
+    `"solana airdrop" developer -is:retweet lang:en ${BLOCK}`,
+    `"solana ecosystem" building -is:retweet lang:en ${BLOCK}`,
+    `"solana token" launch developer -is:retweet lang:en ${BLOCK}`,
+    `$SOL developer tools -is:retweet lang:en ${BLOCK}`,
+    `"crypto community" solana builder -is:retweet lang:en ${BLOCK}`,
+    `"solana project" building -is:retweet lang:en ${BLOCK}`,
   ];
 
   const query = pick(queries);
@@ -335,9 +335,12 @@ async function engageTrendingCrypto() {
     const tweets = await searchTweets(query, 10);
     if (!tweets.data) return 0;
 
+    // Extra safety filter
+    const BLOCK_REGEX = /pay\s*pig|findom|finsub|cash\s*slave|tribute|goddess|mistress|nsfw|porn|onlyfans|rug\s*pull|honeypot|send\s*me\s*money/i;
+
     // Like relevant tweets (replies are blocked by X for small accounts)
     const targets = tweets.data
-      .filter(t => t.public_metrics?.like_count > 3)
+      .filter(t => (t.public_metrics?.like_count > 3) && !BLOCK_REGEX.test(t.text))
       .slice(0, 5);
 
     const userId = process.env.X_ACCESS_TOKEN.split('-')[0];
@@ -355,10 +358,11 @@ async function engageTrendingCrypto() {
       } catch (e) {}
     }
 
-    // Retweet the most popular one
+    // Retweet only if 20+ likes (higher bar = less chance of trash)
     const top = targets[0];
-    if (top && (top.public_metrics?.like_count || 0) > 10) {
+    if (top && (top.public_metrics?.like_count || 0) > 20) {
       try {
+        console.log(`[Giveaway] RT candidate: "${top.text?.slice(0, 80)}..." (${top.public_metrics?.like_count} likes)`);
         const rtUrl = `https://api.twitter.com/2/users/${userId}/retweets`;
         const rtAuth = await signTwitterRequest('POST', rtUrl);
         await fetch(rtUrl, {

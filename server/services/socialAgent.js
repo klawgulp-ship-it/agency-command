@@ -718,28 +718,30 @@ async function runXEngagement() {
   const userId = process.env.X_ACCESS_TOKEN.split('-')[0];
 
   try {
-    // Search trending topics we can add value to
+    // Search quality dev/crypto topics — negative filters block spam/scam/NSFW
+    const BLOCK_WORDS = '-pig -pigs -findom -finsub -cashslave -paypig -slave -tribute -goddess -mistress -domme -nsfw -porn -xxx -onlyfans -scam -rug -rugged -honeypot';
     const queries = [
-      'solana payments -is:retweet lang:en',
-      'accept crypto website -is:retweet lang:en',
-      '"payment links" -is:retweet lang:en',
-      'npm developer tools -is:retweet lang:en',
-      'freelance crypto -is:retweet lang:en',
-      '"open source" bounty -is:retweet lang:en',
-      'USDC payments -is:retweet lang:en',
-      '"code review" tool -is:retweet lang:en',
+      `"solana developer" -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"building on solana" -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"USDC payments" developer -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"open source" developer tools -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"npm package" typescript -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"code review" developer -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"freelance developer" crypto -is:retweet lang:en ${BLOCK_WORDS}`,
+      `solana ecosystem project -is:retweet lang:en ${BLOCK_WORDS}`,
     ];
     const query = queries[Math.floor(Math.random() * queries.length)];
     const searchData = await searchTweets(query, 10);
-    const tweets = searchData.data || [];
+    let tweets = searchData.data || [];
+
+    // Extra safety: filter out any tweet with sketchy content
+    const BLOCK_REGEX = /pay\s*pig|findom|finsub|cash\s*slave|tribute|goddess|mistress|domme|nsfw|porn|onlyfans|rug\s*pull|honeypot|send\s*me\s*money/i;
+    tweets = tweets.filter(t => !BLOCK_REGEX.test(t.text));
 
     // Sort by engagement
     tweets.sort((a, b) => (b.public_metrics?.like_count || 0) - (a.public_metrics?.like_count || 0));
 
-    // Skip replies — X blocks reply-to-conversation for accounts not mentioned/engaged
-    // Focus on likes + retweets + quote tweets instead (no restrictions)
-
-    // Like up to 8 tweets — signals algo we're an active account
+    // Like quality tweets
     for (const tw of tweets.slice(0, 8)) {
       try {
         const likeUrl = `https://api.twitter.com/2/users/${userId}/likes`;
@@ -755,28 +757,37 @@ async function runXEngagement() {
       } catch (e) {}
     }
 
-    // Retweet the most popular one (if >10 likes) — shows up in our followers' feeds
-    const topTweet = tweets[0];
-    if (topTweet && (topTweet.public_metrics?.like_count || 0) > 10) {
+    // Retweet — use Claude to verify it's actually good content before retweeting
+    const rtCandidate = tweets.find(t => (t.public_metrics?.like_count || 0) > 20);
+    if (rtCandidate) {
       try {
-        const rtUrl = `https://api.twitter.com/2/users/${userId}/retweets`;
-        const rtAuth = await signTwitterRequest('POST', rtUrl);
-        const rtRes = await fetch(rtUrl, {
-          method: 'POST',
-          headers: { ...rtAuth, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tweet_id: topTweet.id }),
-          signal: AbortSignal.timeout(5000),
-        });
-        if (rtRes.ok) results.retweets++;
+        const check = await askClaude(`Should a professional dev/crypto brand retweet this? Reply ONLY "yes" or "no".\n\nTweet: "${rtCandidate.text.slice(0, 250)}"\n\nSay "no" if it's: spam, scam, NSFW, fetish, begging, low quality, controversial, offensive, or not related to tech/crypto/dev.`);
+        if (check && check.toLowerCase().trim().startsWith('yes')) {
+          trackSpend('social-agent-haiku', 0.001);
+          const rtUrl = `https://api.twitter.com/2/users/${userId}/retweets`;
+          const rtAuth = await signTwitterRequest('POST', rtUrl);
+          const rtRes = await fetch(rtUrl, {
+            method: 'POST',
+            headers: { ...rtAuth, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tweet_id: rtCandidate.id }),
+            signal: AbortSignal.timeout(5000),
+          });
+          if (rtRes.ok) {
+            results.retweets++;
+            console.log(`[X] Retweeted: "${rtCandidate.text.slice(0, 80)}..."`);
+          }
+        } else {
+          console.log(`[X] Skipped RT (failed quality check): "${rtCandidate.text.slice(0, 80)}..."`);
+        }
       } catch (e) {}
     }
 
-    // Quote tweet a relevant tweet (no reply restriction on quotes)
-    const quotable = tweets.find(t => (t.public_metrics?.like_count || 0) > 5);
+    // Quote tweet — also screen with Claude first
+    const quotable = tweets.find(t => (t.public_metrics?.like_count || 0) > 10 && t.id !== rtCandidate?.id);
     if (quotable) {
       try {
-        const quoteText = await askClaude(`A tweet about "${query}" is getting engagement. Write a quote tweet (under 250 chars) that adds a hot take or useful perspective. Naturally mention snipelink.com if relevant. Sound like a real dev, not a brand. No emojis.`);
-        if (quoteText && quoteText.length > 10 && quoteText.length <= 280) {
+        const quoteText = await askClaude(`A developer tweeted: "${quotable.text.slice(0, 200)}"\n\nWrite a quote tweet (under 250 chars) that adds a genuine dev perspective. Mention snipelink.com only if relevant. Sound like a real developer. No emojis. If the original tweet is spam, scam, NSFW, or low quality, respond with just "SKIP".`);
+        if (quoteText && !quoteText.includes('SKIP') && quoteText.length > 10 && quoteText.length <= 280) {
           trackSpend('social-agent-haiku', 0.001);
           const qtUrl = 'https://api.twitter.com/2/tweets';
           const qtAuth = await signTwitterRequest('POST', qtUrl);
