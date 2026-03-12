@@ -643,77 +643,29 @@ async function runX() {
   console.log(`[X] Today's tweet count: ${todayCount}/12`);
   if (todayCount >= 12) { results.errors.push('Daily limit reached'); return results; }
 
-  // Alternate between viral formats
-  const formatIdx = todayCount % VIRAL_FORMATS.length;
-  const format = VIRAL_FORMATS[formatIdx];
-  console.log(`[X] Format: ${format.style}`);
-
-  // Try queued content first for basic tweets
+  // Always use queued content first — it's pre-written and clean
   const queued = getQueuedContent('x');
   let tweetText;
 
-  if (format.style === 'thread_hook' && !queued) {
-    // Generate a thread (hook + 2-3 follow-ups)
-    try {
-      const hook = await askClaude(format.prompt);
-      if (hook) trackSpend('social-agent-haiku', 0.001);
-      if (!hook || hook.length > 280) {
-        console.log(`[X] Thread hook bad — length: ${hook?.length || 0}`);
-        // Fall back to single tweet instead of giving up
-        tweetText = hook ? hook.slice(0, 277) + '...' : null;
-      } else {
-        const hookResult = await postTweet(hook);
-        if (!hookResult.data?.id) {
-          console.log(`[X] Thread hook post failed:`, JSON.stringify(hookResult).slice(0, 150));
-          results.errors.push('Thread hook failed');
-          return results;
-        }
-        results.tweets++;
-        trackPost('x', 'thread-hook', `tweet:${hookResult.data.id}`, hook);
-        console.log(`[X] Thread hook posted: ${hookResult.data.id}`);
-
-        // Generate thread replies
-        const thread = await askClaude(`You just posted this tweet: "${hook}"
-Now write 2-3 short follow-up tweets (each under 280 chars) that deliver on the promise. Include snipelink.com in the last tweet naturally.
-Format: Return each tweet on a new line, separated by ---
-Rules: Each tweet should add value. Last tweet has the CTA. No emojis. Sound like a real dev.`);
-        if (thread) trackSpend('social-agent-haiku', 0.001);
-
-        const replies = thread.split('---').map(t => t.trim()).filter(t => t.length > 10 && t.length <= 280);
-        let lastTweetId = hookResult.data.id;
-
-        for (const reply of replies.slice(0, 3)) {
-          await sleep(2000);
-          const replyResult = await postTweet(reply, lastTweetId);
-          if (replyResult.data?.id) {
-            lastTweetId = replyResult.data.id;
-            results.tweets++;
-            trackPost('x', 'thread-reply', `tweet:${replyResult.data.id}`, reply);
-          }
-        }
-        results.threads++;
-        return results;
-      }
-    } catch (e) {
-      console.log(`[X] Thread error: ${e.message}`);
-      results.errors.push(`Thread: ${e.message}`);
+  if (queued) {
+    tweetText = queued.content;
+    console.log(`[X] Using queued content (${tweetText.length} chars)`);
+  } else {
+    // Queue empty — generate with Claude as fallback
+    const formatIdx = todayCount % VIRAL_FORMATS.length;
+    const format = VIRAL_FORMATS[formatIdx];
+    console.log(`[X] Queue empty, generating with Claude (${format.style})`);
+    tweetText = await askClaude(format.prompt + '\n\nIMPORTANT: Return ONLY the tweet text. No quotes, no labels, no options, no explanations. Just the raw tweet.');
+    if (tweetText) {
+      trackSpend('social-agent-haiku', 0.001);
+      // Strip any quotes or labels Claude might add
+      tweetText = tweetText.replace(/^["']|["']$/g, '').replace(/^(Tweet|Option|Here)[:\s]*/i, '').trim();
     }
-  }
-
-  // Single viral tweet (also fallback if thread failed)
-  if (!tweetText) {
-    if (queued) {
-      tweetText = queued.content;
-      console.log(`[X] Using queued content`);
-    } else {
-      tweetText = await askClaude(format.prompt);
-      if (tweetText) trackSpend('social-agent-haiku', 0.001);
-      console.log(`[X] Claude generated ${tweetText?.length || 0} chars`);
-    }
+    console.log(`[X] Claude generated ${tweetText?.length || 0} chars`);
   }
 
   if (!tweetText || tweetText.length < 10) {
-    console.log(`[X] No tweet text generated`);
+    console.log(`[X] No tweet text`);
     return results;
   }
 
