@@ -59,7 +59,8 @@ function trackPost(platform, actionType, target, content, status = 'posted') {
 }
 
 function getPostCountToday(platform) {
-  const row = db.prepare(`SELECT COUNT(*) as c FROM social_posts WHERE platform = ? AND created_at > datetime('now', '-1 day') AND status = 'posted'`).get(platform);
+  // Only count actual content posts (tweets, posts, messages) — NOT engagement actions (likes, follows, RTs)
+  const row = db.prepare(`SELECT COUNT(*) as c FROM social_posts WHERE platform = ? AND created_at > datetime('now', '-1 day') AND status = 'posted' AND action_type NOT IN ('engagement', 'like', 'follow', 'retweet')`).get(platform);
   return row?.c || 0;
 }
 
@@ -676,7 +677,7 @@ async function runX() {
     const data = await postTweet(tweetText);
     if (data.data?.id) {
       results.tweets++;
-      trackPost('x', format.style, `tweet:${data.data.id}`, tweetText);
+      trackPost('x', queued ? 'queued' : 'generated', `tweet:${data.data.id}`, tweetText);
       console.log(`[X] Posted tweet: ${data.data.id}`);
     } else {
       console.log(`[X] Post failed: ${JSON.stringify(data).slice(0, 150)}`);
