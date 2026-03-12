@@ -105,6 +105,15 @@ app.get('/oauth2callback', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── YouTube Manual Trigger ──────────────────────────────
+app.post('/api/youtube/run', async (req, res) => {
+  try {
+    console.log('[API] Manual YouTube agent trigger');
+    const result = await runYouTubeAgent();
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Giveaway Winners (manual send) ─────────────────────
 app.get('/api/giveaway/winners', (req, res) => {
   const pending = getPendingWinners();
