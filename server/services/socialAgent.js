@@ -733,45 +733,14 @@ async function runXEngagement() {
     const searchData = await searchTweets(query, 10);
     const tweets = searchData.data || [];
 
-    // Sort by engagement — reply to popular tweets for maximum visibility
+    // Sort by engagement
     tweets.sort((a, b) => (b.public_metrics?.like_count || 0) - (a.public_metrics?.like_count || 0));
 
-    // Reply to top 2 most popular tweets with genuine, helpful replies
-    for (const tw of tweets.slice(0, 2)) {
-      try {
-        const reply = await askClaude(`Someone on X/Twitter posted: "${tw.text.slice(0, 200)}"
+    // Skip replies — X blocks reply-to-conversation for accounts not mentioned/engaged
+    // Focus on likes + retweets + quote tweets instead (no restrictions)
 
-Write a helpful reply (under 280 chars) that adds value to the conversation. If naturally relevant, mention one of:
-- snipelink.com — free payment links for SOL/USDC/PayPal
-- npx snipelink-review — free AI code review CLI
-- npx snipelink-ts — JS to TS converter
-
-Rules:
-- Be genuinely helpful first — don't force a product mention
-- If the tweet isn't relevant to our tools, just be a helpful dev
-- Sound like a real person having a conversation
-- No "Great tweet!" or sycophantic openers
-- Under 280 chars
-- No emojis`);
-
-        if (reply) {
-          trackSpend('social-agent-haiku', 0.001);
-          if (reply.length > 10 && reply.length <= 280) {
-            const replyResult = await postTweet(reply, tw.id);
-            if (replyResult.data?.id) {
-              results.replies++;
-              trackPost('x', 'reply', `reply-to:${tw.id}`, reply);
-            }
-          }
-        }
-        await sleep(3000);
-      } catch (e) {
-        results.errors.push(`Reply: ${e.message}`);
-      }
-    }
-
-    // Like up to 5 tweets — signals algo we're an active account
-    for (const tw of tweets.slice(0, 5)) {
+    // Like up to 8 tweets — signals algo we're an active account
+    for (const tw of tweets.slice(0, 8)) {
       try {
         const likeUrl = `https://api.twitter.com/2/users/${userId}/likes`;
         const likeAuth = await signTwitterRequest('POST', likeUrl);
@@ -786,9 +755,9 @@ Rules:
       } catch (e) {}
     }
 
-    // Retweet the most popular one (if >50 likes) — shows up in our followers' feeds
+    // Retweet the most popular one (if >10 likes) — shows up in our followers' feeds
     const topTweet = tweets[0];
-    if (topTweet && (topTweet.public_metrics?.like_count || 0) > 50) {
+    if (topTweet && (topTweet.public_metrics?.like_count || 0) > 10) {
       try {
         const rtUrl = `https://api.twitter.com/2/users/${userId}/retweets`;
         const rtAuth = await signTwitterRequest('POST', rtUrl);
@@ -800,6 +769,32 @@ Rules:
         });
         if (rtRes.ok) results.retweets++;
       } catch (e) {}
+    }
+
+    // Quote tweet a relevant tweet (no reply restriction on quotes)
+    const quotable = tweets.find(t => (t.public_metrics?.like_count || 0) > 5);
+    if (quotable) {
+      try {
+        const quoteText = await askClaude(`A tweet about "${query}" is getting engagement. Write a quote tweet (under 250 chars) that adds a hot take or useful perspective. Naturally mention snipelink.com if relevant. Sound like a real dev, not a brand. No emojis.`);
+        if (quoteText && quoteText.length > 10 && quoteText.length <= 280) {
+          trackSpend('social-agent-haiku', 0.001);
+          const qtUrl = 'https://api.twitter.com/2/tweets';
+          const qtAuth = await signTwitterRequest('POST', qtUrl);
+          const qtRes = await fetch(qtUrl, {
+            method: 'POST',
+            headers: { ...qtAuth, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: quoteText, quote_tweet_id: quotable.id }),
+            signal: AbortSignal.timeout(10000),
+          });
+          const qtData = await qtRes.json();
+          if (qtData.data?.id) {
+            results.replies++;
+            trackPost('x', 'quote-tweet', `quote:${quotable.id}`, quoteText);
+          }
+        }
+      } catch (e) {
+        results.errors.push(`Quote: ${e.message?.slice(0, 80)}`);
+      }
     }
   } catch (e) {
     results.errors.push(`X engagement: ${e.message}`);

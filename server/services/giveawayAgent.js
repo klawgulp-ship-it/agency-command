@@ -327,26 +327,39 @@ async function engageTrendingCrypto() {
     const tweets = await searchTweets(query, 10);
     if (!tweets.data) return 0;
 
-    // Reply to 2-3 relevant tweets
+    // Like relevant tweets (replies are blocked by X for small accounts)
     const targets = tweets.data
-      .filter(t => t.public_metrics?.like_count > 5) // Only engage with active tweets
-      .slice(0, 2);
+      .filter(t => t.public_metrics?.like_count > 3)
+      .slice(0, 5);
 
-    const replies = [
-      'Check out $SLK on Solana — doing giveaways every day. Follow @snipelink',
-      '$SLK is doing daily airdrops. Just drop your SOL address on our latest post @snipelink',
-      'If you like free tokens check @snipelink — $SLK giveaways running now',
-      'Following. Also check out $SLK — running giveaways for the Solana community @snipelink',
-    ];
-
-    for (const tweet of targets) {
+    const userId = process.env.X_ACCESS_TOKEN.split('-')[0];
+    for (const tw of targets) {
       try {
-        await postTweet(pick(replies), tweet.id);
+        const likeUrl = `https://api.twitter.com/2/users/${userId}/likes`;
+        const likeAuth = await signTwitterRequest('POST', likeUrl);
+        await fetch(likeUrl, {
+          method: 'POST',
+          headers: { ...likeAuth, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tweet_id: tw.id }),
+        });
         engaged++;
-        await new Promise(r => setTimeout(r, 5000)); // Rate limit
-      } catch (e) {
-        console.log('[Giveaway] Engagement reply failed:', e.message?.slice(0, 100));
-      }
+        await new Promise(r => setTimeout(r, 1000));
+      } catch (e) {}
+    }
+
+    // Retweet the most popular one
+    const top = targets[0];
+    if (top && (top.public_metrics?.like_count || 0) > 10) {
+      try {
+        const rtUrl = `https://api.twitter.com/2/users/${userId}/retweets`;
+        const rtAuth = await signTwitterRequest('POST', rtUrl);
+        await fetch(rtUrl, {
+          method: 'POST',
+          headers: { ...rtAuth, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ tweet_id: top.id }),
+        });
+        engaged++;
+      } catch (e) {}
     }
   } catch (e) {
     console.log('[Giveaway] Trending engagement failed:', e.message?.slice(0, 100));
