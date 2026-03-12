@@ -7,6 +7,8 @@ const GITHUB_USERNAME = 'klawgulp-ship-it';
 
 const MAX_FIX_ITERATIONS = 3;
 const MAX_RESPONSES_PER_CYCLE = 5;
+const MAX_CI_FIX_ITERATIONS = 2; // CI fixes count separately from review fixes
+const GITHUB_EMAIL = 'klawgulp@gmail.com';
 
 // Patterns that signal the PR is dead — stop wasting cycles
 const REJECTION_PATTERNS = [
@@ -100,6 +102,261 @@ function isApproval(review) {
   if (review.state === 'APPROVED') return true;
   const body = (review.body || '').toLowerCase();
   return /\blgtm\b/.test(body) || /\blooks good\b/.test(body) || /\bship it\b/.test(body);
+}
+
+// ─── CI failure tracking ─────────────────────────────────
+function getCIFixCount(notes) {
+  return ((notes || '').match(/\[CI-FIX\]/g) || []).length;
+}
+
+function getLastCIRunId(notes) {
+  const matches = [...(notes || '').matchAll(/\[CI-RUN:(\d+)\]/g)];
+  return matches.length ? matches[matches.length - 1][1] : null;
+}
+
+function isCLAIssue(comments) {
+  return comments.some(c =>
+    (c.user?.login === 'CLAassistant' || c.user?.login === 'cla-bot[bot]' || c.user?.login === 'cla-assistant[bot]') &&
+    /not signed|sign.*CLA|1 out of 2|seems not to be a GitHub user/i.test(c.body || '')
+  );
+}
+
+// ─── Fetch CI check status for a PR ─────────────────────
+async function getCIStatus(owner, repo, prNumber) {
+  const pr = await gh(`/repos/${owner}/${repo}/pulls/${prNumber}`);
+  const headSha = pr.head?.sha;
+  if (!headSha) return { status: 'unknown', runs: [] };
+
+  // Get check runs for this commit
+  const checks = await gh(`/repos/${owner}/${repo}/commits/${headSha}/check-runs`);
+  const runs = (checks.check_runs || []).map(r => ({
+    id: r.id,
+    name: r.name,
+    status: r.status,
+    conclusion: r.conclusion,
+    detailsUrl: r.details_url || r.html_url,
+  }));
+
+  const failed = runs.filter(r => r.conclusion === 'failure');
+  const pending = runs.filter(r => r.status !== 'completed');
+  const allPassed = runs.length > 0 && failed.length === 0 && pending.length === 0;
+
+  return { status: allPassed ? 'success' : failed.length > 0 ? 'failure' : 'pending', runs, failed, headSha, branch: pr.head?.ref };
+}
+
+// ─── Fetch failed CI logs via GitHub Actions API ─────────
+async function fetchCIFailureLogs(owner, repo, headSha) {
+  // Find the workflow run for this commit
+  let runs;
+  try {
+    const result = await gh(`/repos/${owner}/${repo}/actions/runs?head_sha=${headSha}&per_page=5`);
+    runs = (result.workflow_runs || []).filter(r => r.conclusion === 'failure');
+  } catch (e) {
+    return null;
+  }
+  if (!runs.length) return null;
+
+  const run = runs[0];
+  // Get failed jobs
+  let jobs;
+  try {
+    const jobsResult = await gh(`/repos/${owner}/${repo}/actions/runs/${run.id}/jobs`);
+    jobs = (jobsResult.jobs || []).filter(j => j.conclusion === 'failure');
+  } catch (e) {
+    return null;
+  }
+
+  // Fetch logs for each failed job (annotations give us error messages)
+  const errors = [];
+  for (const job of jobs.slice(0, 3)) { // max 3 jobs to save API calls
+    try {
+      const annotations = await gh(`/repos/${owner}/${repo}/check-runs/${job.id}/annotations`);
+      for (const ann of (annotations || []).slice(0, 5)) {
+        errors.push({
+          job: job.name,
+          file: ann.path || '',
+          line: ann.start_line || 0,
+          level: ann.annotation_level,
+          message: ann.message || '',
+        });
+      }
+    } catch (e) { /* non-fatal */ }
+  }
+
+  // If no annotations, try to get error info from job steps
+  if (errors.length === 0) {
+    for (const job of jobs.slice(0, 3)) {
+      const failedSteps = (job.steps || []).filter(s => s.conclusion === 'failure');
+      for (const step of failedSteps) {
+        errors.push({
+          job: job.name,
+          file: '',
+          line: 0,
+          level: 'failure',
+          message: `Step "${step.name}" failed`,
+        });
+      }
+    }
+  }
+
+  return { runId: run.id, runUrl: run.html_url, jobs: jobs.map(j => j.name), errors };
+}
+
+// ─── Fix CI failures using Claude ────────────────────────
+async function fixCIFailure(owner, repo, prNumber, branch, ciLogs, bountyId) {
+  // Read the PR diff for context
+  let diff = '';
+  try {
+    const token = process.env.GITHUB_TOKEN;
+    const diffRes = await fetch(`${GITHUB_API}/repos/${owner}/${repo}/pulls/${prNumber}`, {
+      headers: {
+        'Accept': 'application/vnd.github.v3.diff',
+        'Authorization': `token ${token}`,
+        'User-Agent': 'AgencyCommand/1.0',
+      },
+      signal: AbortSignal.timeout(30000),
+    });
+    if (diffRes.ok) diff = await diffRes.text();
+  } catch (e) { /* non-fatal */ }
+
+  // Determine affected files from errors
+  const affectedFiles = new Set();
+  for (const err of ciLogs.errors) {
+    if (err.file) affectedFiles.add(err.file);
+  }
+  // Also extract from diff if no specific files in errors
+  if (affectedFiles.size === 0 && diff) {
+    const fileMatches = diff.matchAll(/^diff --git a\/(.+?) b\//gm);
+    for (const m of fileMatches) affectedFiles.add(m[1]);
+  }
+
+  // Read file contents from fork
+  const fileContents = {};
+  for (const filePath of [...affectedFiles].slice(0, 8)) {
+    try {
+      const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
+      const file = await gh(`/repos/${GITHUB_USERNAME}/${repo}/contents/${encodedPath}?ref=${branch}`);
+      if (file.content) {
+        fileContents[filePath] = Buffer.from(file.content, 'base64').toString('utf-8');
+      }
+    } catch (e) { /* file might not exist in our fork */ }
+  }
+
+  const errorsText = ciLogs.errors.map(e =>
+    `[${e.job}] ${e.file}${e.line ? `:${e.line}` : ''} — ${e.message}`
+  ).join('\n');
+
+  const filesContext = Object.entries(fileContents)
+    .map(([path, content]) => `--- FILE: ${path} ---\n${content.slice(0, 6000)}`)
+    .join('\n\n');
+
+  const prompt = `You are an expert developer fixing CI failures on a pull request. The PR must pass CI to be merged.
+
+PR #${prNumber} on ${owner}/${repo}
+
+CI FAILURES:
+Failed jobs: ${ciLogs.jobs.join(', ')}
+Run URL: ${ciLogs.runUrl}
+
+ERRORS:
+${errorsText.slice(0, 3000)}
+
+PR DIFF (excerpt):
+${diff.slice(0, 4000)}
+
+CURRENT FILE CONTENTS:
+${filesContext}
+
+Common CI failure patterns to check:
+- Compilation errors (wrong types, missing imports, name collisions)
+- In Scala/ZIO repos: zio.System vs java.lang.System, zio.Runtime vs java.lang.Runtime
+- Lint/formatting failures (run formatter mentally, match project style)
+- Duplicate class/object names across shared/jvm/js source directories
+- Missing test dependencies or incorrect test structure
+- CLA/signing issues are NOT code problems — skip those
+
+Fix ALL compilation and lint errors. If it's a formatting issue, reformat the entire affected file.
+
+CRITICAL JSON RULES:
+- Your entire response must be valid JSON — no markdown, no backticks
+- Escape all special characters in strings: newlines as \\n, tabs as \\t, quotes as \\"
+
+Respond in this exact JSON format:
+{
+  "changes": [
+    {"path": "path/to/file", "content": "FULL updated file content", "description": "What changed"}
+  ],
+  "commit_message": "fix: description of CI fix",
+  "analysis": "Brief explanation of what was wrong (1-2 sentences)"
+}
+
+RULES:
+- Include COMPLETE file content, not just diffs
+- Fix the root cause, not symptoms
+- If a file needs renaming, include both: empty content for old path deletion won't work via API, so note it in analysis
+- Match existing code style exactly`;
+
+  const result = await askSonnet(prompt, 16384);
+  const jsonMatch = result.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) throw new Error('Failed to parse Claude CI fix response');
+
+  let fix;
+  try {
+    fix = JSON.parse(jsonMatch[0]);
+  } catch (e) {
+    const partial = jsonMatch[0];
+    const lastComplete = partial.lastIndexOf('"}');
+    if (lastComplete > 0) {
+      const repaired = partial.slice(0, lastComplete + 2) +
+        '],"commit_message":"fix: address CI failures","analysis":"Fixed CI errors."}';
+      try { fix = JSON.parse(repaired); } catch (e2) {}
+    }
+    if (!fix) throw new Error('Failed to parse CI fix JSON from Claude');
+  }
+
+  if (!fix.changes || fix.changes.length === 0) {
+    return null;
+  }
+
+  // Push each file change
+  let lastCommitSha = null;
+  for (const change of fix.changes) {
+    if (!change.path || !change.content) continue;
+    console.log(`[CI-FIX] Pushing fix to ${change.path} on ${branch}`);
+    lastCommitSha = await pushFixCommit(
+      owner, repo, branch, change.path, change.content,
+      fix.commit_message || 'fix: address CI failures'
+    );
+  }
+
+  return { commitSha: lastCommitSha, filesChanged: fix.changes.length, analysis: fix.analysis || '' };
+}
+
+// ─── Fix CLA issues by amending commit author ────────────
+async function fixCLAIssue(owner, repo, prNumber, branch, bountyId) {
+  // CLA failures happen when commits have wrong author email.
+  // We can't amend via API — but we CAN push an empty commit with correct author
+  // or post a comment explaining how to fix it.
+  // Best approach: comment on the PR with instructions to recheck, since
+  // the CLA is usually already signed by klawgulp-ship-it.
+
+  // Check if we already handled this
+  const bounty = db.prepare('SELECT * FROM bounties WHERE id = ?').get(bountyId);
+  if ((bounty?.notes || '').includes('[CLA-HANDLED]')) return null;
+
+  // Post a comment asking CLA bot to recheck
+  try {
+    await gh(`/repos/${owner}/${repo}/issues/${prNumber}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({
+        body: '@CLAassistant check\n\nAll commits in this PR are authored by klawgulp-ship-it (klawgulp@gmail.com). Please recheck.',
+      }),
+    });
+  } catch (e) {
+    console.warn(`[CLA-FIX] Failed to post CLA recheck comment: ${e.message}`);
+  }
+
+  return { handled: true };
 }
 
 // ─── Push fix commit to our fork's branch ───────────────
@@ -439,6 +696,64 @@ export async function checkPRReviews() {
           { bountyId: bounty.id },
           `https://github.com/${owner}/${repo}/pull/${prNumber}`);
         continue;
+      }
+
+      // ─── CI failure detection and auto-fix ───────────────
+      const ciFixCount = getCIFixCount(bounty.notes);
+      if (ciFixCount < MAX_CI_FIX_ITERATIONS) {
+        try {
+          const ciStatus = await getCIStatus(owner, repo, prNumber);
+          const lastHandledRun = getLastCIRunId(bounty.notes);
+
+          if (ciStatus.status === 'failure') {
+            const ciLogs = await fetchCIFailureLogs(owner, repo, ciStatus.headSha);
+
+            if (ciLogs && String(ciLogs.runId) !== lastHandledRun) {
+              log.push(`[CI-FIX] ${owner}/${repo}#${prNumber} — CI failed (${ciLogs.jobs.join(', ')}), attempting fix`);
+
+              const ciResult = await fixCIFailure(owner, repo, prNumber, ciStatus.branch, ciLogs, bounty.id);
+
+              if (ciResult) {
+                responded++;
+                db.prepare("UPDATE bounties SET notes = COALESCE(notes, '') || ?, updated_at = datetime('now') WHERE id = ?")
+                  .run(`\n[CI-RUN:${ciLogs.runId}][CI-FIX] ${ciResult.filesChanged} file(s), sha:${(ciResult.commitSha || '').slice(0, 7)} — ${ciResult.analysis.slice(0, 80)}`, bounty.id);
+
+                log.push(`[CI-FIX] Fixed: ${ciResult.filesChanged} file(s), ${ciResult.analysis.slice(0, 60)}`);
+
+                notify('ci_fix', `CI fix pushed for ${owner}/${repo}#${prNumber}`,
+                  `Auto-fixed CI failure: ${ciResult.analysis.slice(0, 100)}`,
+                  { bountyId: bounty.id, prNumber },
+                  `https://github.com/${owner}/${repo}/pull/${prNumber}`);
+              } else {
+                // Mark run as seen even if no fix generated
+                db.prepare("UPDATE bounties SET notes = COALESCE(notes, '') || ?, updated_at = datetime('now') WHERE id = ?")
+                  .run(`\n[CI-RUN:${ciLogs.runId}][CI-NO-FIX] Could not auto-fix`, bounty.id);
+                log.push(`[CI-FIX] ${owner}/${repo}#${prNumber} — could not auto-fix CI failure`);
+              }
+            }
+          }
+        } catch (e) {
+          log.push(`[CI-FIX] Error checking CI for ${owner}/${repo}#${prNumber}: ${e.message}`);
+        }
+      }
+
+      // ─── CLA bot detection and handling ─────────────────
+      try {
+        if (!(bounty.notes || '').includes('[CLA-HANDLED]')) {
+          const claComments = issueComments.filter(c =>
+            c.user?.login === 'CLAassistant' || c.user?.login === 'cla-bot[bot]' || c.user?.login === 'cla-assistant[bot]'
+          );
+          if (isCLAIssue(claComments)) {
+            log.push(`[CLA-FIX] ${owner}/${repo}#${prNumber} — CLA issue detected, posting recheck`);
+            const claResult = await fixCLAIssue(owner, repo, prNumber, null, bounty.id);
+            if (claResult?.handled) {
+              db.prepare("UPDATE bounties SET notes = COALESCE(notes, '') || ?, updated_at = datetime('now') WHERE id = ?")
+                .run('\n[CLA-HANDLED] Posted recheck comment', bounty.id);
+            }
+          }
+        }
+      } catch (e) {
+        log.push(`[CLA-FIX] Error: ${e.message}`);
       }
 
       // Process approvals — just log them
