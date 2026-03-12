@@ -26,14 +26,5 @@
     { "content": "Solana devs: we built embeddable payment widgets for your apps. Dark/light theme, SOL/USDC, drop-in JS snippet. snipelink.com", "tags": [] },
     { "content": "TypeScript migration tip: npx snipelink-ts converts JS files with inferred types and proper interfaces. Handles React JSX to TSX too.", "tags": [] }
   ],
-  "x": [
-    { "content": "Built free payment links for devs — accept SOL, USDC, PayPal with one URL. No KYC, no monthly fees.\n\nsnipelink.com", "tags": [] },
-    { "content": "Every GitHub repo with a bounty program needs a payment badge in the README. One line of markdown, instant crypto payments.\n\nsnipelink.com", "tags": [] },
-    { "content": "npx snipelink-review — free AI code review in your terminal. No signup, no API keys. Try it on your worst file.", "tags": [] },
-    { "content": "Why are we still paying 2.9% + 30c per transaction? SOL transfers cost fractions of a cent and settle in 400ms.\n\nsnipelink.com", "tags": [] },
-    { "content": "Shipped 3 free npm tools:\n\nnpx snipelink-review (AI code review)\nnpx snipelink-ts (JS→TS converter)\nnpx snipelink-readme (README gen)\n\nNo accounts needed. Just run them.", "tags": [] },
-    { "content": "If you freelance and accept crypto, stop overcomplicating it. Create a payment link, share it, get paid.\n\nsnipelink.com", "tags": [] },
-    { "content": "Solana ecosystem needs more payment infra for devs. Not DeFi protocols — just simple payment links that work. That's what we're building.", "tags": [] },
-    { "content": "Embeddable payment badges for GitHub READMEs. Shields.io style, links to SOL/USDC/PayPal checkout. Free.\n\nsnipelink.com/api/embed", "tags": [] }
-  ]
+  "x": []
 }
