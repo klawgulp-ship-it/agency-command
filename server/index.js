@@ -29,7 +29,7 @@ import { runAutoBidder } from './services/freelanceBidder.js';
 import { runSecurityScanner } from './services/securityScanner.js';
 import { runMarketingAgent } from './services/marketingAgent.js';
 import { runSocialAgent } from './services/socialAgent.js';
-import { runGiveawayAgent } from './services/giveawayAgent.js';
+import { runGiveawayAgent, getPendingWinners, markGiveawaySent } from './services/giveawayAgent.js';
 import { runYouTubeAgent, getYouTubeOAuthUrl, exchangeYouTubeCode } from './services/youtubeAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 import { setupToolRoutes } from './services/microSaasEngine.js';
@@ -103,6 +103,17 @@ app.get('/oauth2callback', async (req, res) => {
       command: `railway variables --set "YOUTUBE_REFRESH_TOKEN=${tokens.refresh_token}"`,
     });
   } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Giveaway Winners (manual send) ─────────────────────
+app.get('/api/giveaway/winners', (req, res) => {
+  const pending = getPendingWinners();
+  res.json({ pending, count: pending.length });
+});
+
+app.post('/api/giveaway/sent/:id', (req, res) => {
+  markGiveawaySent(req.params.id);
+  res.json({ ok: true, message: `Giveaway ${req.params.id} marked as sent` });
 });
 
 // Health check

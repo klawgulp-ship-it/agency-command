@@ -272,19 +272,17 @@ async function closeExpiredGiveaways() {
       continue;
     }
 
-    // Pick random winner(s) — up to 10
-    const winnerCount = Math.min(entries.length, 10);
+    // Pick 3 random winners (cost is ~$0.60 for 3 winners = great ROI)
+    const winnerCount = Math.min(entries.length, 3);
     const shuffled = entries.sort(() => Math.random() - 0.5);
     const winners = shuffled.slice(0, winnerCount);
 
     const winnerAddresses = winners.map(w => w.sol_address);
-    db.prepare("UPDATE giveaways SET status = 'closed', winner_address = ? WHERE id = ?")
+    db.prepare("UPDATE giveaways SET status = 'pending_send', winner_address = ? WHERE id = ?")
       .run(JSON.stringify(winnerAddresses), giveaway.id);
 
-    // Post winner announcement
-    const winnerText = winners.length === 1
-      ? `$SLK Giveaway Winner!\n\nCongrats! Tokens being sent to:\n${winners[0].sol_address.slice(0, 8)}...${winners[0].sol_address.slice(-4)}\n\nFollow @snipelink for the next drop\n\nsnipelink.com`
-      : `$SLK Giveaway — ${winners.length} WINNERS!\n\n${winners.map(w => w.sol_address.slice(0, 6) + '...' + w.sol_address.slice(-4)).join('\n')}\n\nTokens incoming. Follow @snipelink for the next one\n\nsnipelink.com`;
+    // Post winner announcement on X (truncated addresses for public tweet)
+    const winnerText = `$SLK Giveaway — ${winners.length} WINNERS!\n\n${winners.map(w => w.sol_address.slice(0, 6) + '...' + w.sol_address.slice(-4)).join('\n')}\n\nTokens will be sent manually. Follow @snipelink for the next one\n\nsnipelink.com`;
 
     try {
       await postTweet(winnerText, giveaway.tweet_id);
@@ -292,13 +290,23 @@ async function closeExpiredGiveaways() {
       console.log('[Giveaway] Winner announcement failed:', e.message?.slice(0, 100));
     }
 
+    // Log FULL addresses to console so you can send manually
+    console.log(`\n[Giveaway] ====== WINNERS — SEND TOKENS MANUALLY ======`);
+    console.log(`[Giveaway] Giveaway ID: ${giveaway.id}`);
+    console.log(`[Giveaway] Tweet: https://x.com/snipelink/status/${giveaway.tweet_id}`);
+    console.log(`[Giveaway] Total entries: ${entries.length}`);
+    for (let i = 0; i < winners.length; i++) {
+      console.log(`[Giveaway] Winner ${i + 1}: ${winners[i].sol_address}`);
+    }
+    console.log(`[Giveaway] ============================================\n`);
+
     results.push({
       id: giveaway.id,
       entries: entries.length,
       winners: winnerAddresses,
     });
 
-    console.log(`[Giveaway] Closed ${giveaway.id}: ${entries.length} entries, ${winners.length} winners`);
+    console.log(`[Giveaway] Closed ${giveaway.id}: ${entries.length} entries, ${winners.length} winners — CHECK LOGS FOR FULL ADDRESSES`);
   }
 
   return results;
@@ -403,4 +411,24 @@ export function getGiveawayStats() {
   const totalEntries = db.prepare('SELECT SUM(entries) as s FROM giveaways').get().s || 0;
   const recent = db.prepare('SELECT * FROM giveaways ORDER BY created_at DESC LIMIT 5').all();
   return { total, active, totalEntries, recent };
+}
+
+// ─── Pending Winners (full addresses for manual sending) ──
+export function getPendingWinners() {
+  const pending = db.prepare("SELECT * FROM giveaways WHERE status = 'pending_send' ORDER BY created_at DESC").all();
+  return pending.map(g => ({
+    id: g.id,
+    tweet_id: g.tweet_id,
+    tweet_url: `https://x.com/snipelink/status/${g.tweet_id}`,
+    amount: g.amount,
+    entries: g.entries,
+    winners: JSON.parse(g.winner_address || '[]'),
+    created_at: g.created_at,
+    ends_at: g.ends_at,
+  }));
+}
+
+// ─── Mark giveaway as sent after you send tokens ──────────
+export function markGiveawaySent(giveawayId) {
+  db.prepare("UPDATE giveaways SET status = 'sent' WHERE id = ?").run(giveawayId);
 }
