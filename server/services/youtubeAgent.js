@@ -38,74 +38,135 @@ const CATEGORIES = [
   {
     name: 'rain',
     title_templates: [
-      '{hours} Hours of Heavy Rain for Deep Sleep',
-      'Rain Sounds for Sleeping - {hours} Hours of Rainfall',
+      '{hours} Hours of Heavy Rain for Deep Sleep | Delta Waves',
+      'Rain Sounds for Sleeping - {hours} Hours | Binaural Beats',
       'Heavy Rainfall at Night - Sleep Instantly | {hours}h',
-      'Thunderstorm Rain Sounds | {hours} Hours for Relaxation',
-      'Rain on Tin Roof - {hours} Hours of Soothing Sounds',
+      'Rain on Window - {hours} Hours for Deep Sleep & Relaxation',
+      'Rain on Tin Roof - {hours} Hours | Sleep Frequency Embedded',
     ],
-    description: 'Fall asleep fast with {hours} hours of heavy rain sounds. Perfect for sleeping, studying, relaxation, and meditation. No ads during playback.\n\n🔔 Subscribe for more ambient sounds\n💰 Support us: https://snipelink.com\n\n#rain #sleep #relaxation #ambient #whitenoise',
-    tags: ['rain sounds', 'sleep', 'relaxation', 'ambient', 'white noise', 'rain for sleeping', 'heavy rain', 'rainfall', 'nature sounds', 'ASMR'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.7"`,
-    audio_filter: 'lowpass=f=800,highpass=f=50',
+    description: 'Fall asleep fast with {hours} hours of heavy rain sounds with embedded delta wave frequencies (2Hz) for deep sleep induction. Multiple rain layers: heavy downpour, distant patter, and roof drips blended for maximum realism.\n\nContains subtle binaural beats (left: 200Hz, right: 202Hz = 2Hz delta) beneath the rain — your brain naturally syncs to deep sleep frequency.\n\nSubscribe for more ambient sounds\nSupport: https://snipelink.com\n\n#rain #sleep #deltawaves #binaural #ambient #whitenoise',
+    tags: ['rain sounds', 'sleep', 'delta waves', 'binaural beats', 'ambient', 'rain for sleeping', 'heavy rain', 'deep sleep', 'nature sounds', 'ASMR', 'sleep frequency'],
+    // 3 layers: brown noise (heavy rain body), pink noise (light patter), sine binaural delta
+    audio_inputs: (dur) => [
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.65"`,   // heavy rain body
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.25"`,    // light patter/drips
+      `-f lavfi -i "sine=f=200:r=44100:d=${dur}"`,                  // left ear 200Hz
+      `-f lavfi -i "sine=f=202:r=44100:d=${dur}"`,                  // right ear 202Hz = 2Hz delta beat
+    ],
+    audio_filter_complex: `\
+      [0:a]lowpass=f=800,highpass=f=40[heavy];\
+      [1:a]highpass=f=2000,lowpass=f=8000,volume=0.4[patter];\
+      [2:a]volume=0.03[left];\
+      [3:a]volume=0.03[right];\
+      [left][right]join=inputs=2:channel_layout=stereo[binaural];\
+      [heavy][patter]amix=inputs=2:weights=1 0.3[rain_mix];\
+      [rain_mix][binaural]amix=inputs=2:weights=1 0.15[aout]`,
     color: { r: 30, g: 40, b: 60 },
     text: 'Rain Sounds',
   },
   {
     name: 'thunder',
     title_templates: [
-      '{hours} Hours of Thunderstorm Sounds for Sleep',
-      'Thunder & Rain - Deep Sleep Sounds | {hours}h',
+      '{hours} Hours of Thunderstorm for Deep Sleep | Delta Waves',
+      'Thunder & Rain - Sleep Sounds | {hours}h Binaural',
       'Intense Thunderstorm with Rain | {hours} Hours',
-      'Rolling Thunder for Relaxation - {hours} Hours',
+      'Rolling Thunder for Relaxation - {hours} Hours | 2Hz Delta',
     ],
-    description: '{hours} hours of powerful thunderstorm sounds mixed with heavy rain. Perfect for deep sleep, focus, and relaxation.\n\nSubscribe for more ambient sounds\nSupport: https://snipelink.com\n\n#thunder #storm #rain #sleep #ambient',
-    tags: ['thunderstorm', 'thunder sounds', 'storm sounds', 'rain and thunder', 'sleep sounds', 'ambient', 'relaxation', 'nature'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.8"`,
-    audio_filter: 'lowpass=f=600,highpass=f=30,volume=1.2',
+    description: '{hours} hours of powerful thunderstorm with layered rain, distant thunder rumble, and embedded delta wave frequencies (2Hz binaural beats) for deep sleep.\n\n3 audio layers: heavy rain, deep sub-bass rumble (thunder), and imperceptible 2Hz delta binaural beats that guide your brain into stage 3/4 deep sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#thunder #storm #deltawaves #sleep #binaural #ambient',
+    tags: ['thunderstorm', 'thunder sounds', 'storm', 'delta waves', 'binaural beats', 'sleep sounds', 'deep sleep', 'ambient', 'relaxation'],
+    audio_inputs: (dur) => [
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.7"`,    // rain body
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,    // deep rumble layer
+      `-f lavfi -i "sine=f=174:r=44100:d=${dur}"`,                  // left 174Hz (solfeggio)
+      `-f lavfi -i "sine=f=176:r=44100:d=${dur}"`,                  // right 176Hz = 2Hz delta
+    ],
+    audio_filter_complex: `\
+      [0:a]lowpass=f=600,highpass=f=30[rain];\
+      [1:a]lowpass=f=80,volume=1.5[rumble];\
+      [2:a]volume=0.03[left];\
+      [3:a]volume=0.03[right];\
+      [left][right]join=inputs=2:channel_layout=stereo[binaural];\
+      [rain][rumble]amix=inputs=2:weights=1 0.4[storm_mix];\
+      [storm_mix][binaural]amix=inputs=2:weights=1 0.12[aout]`,
     color: { r: 20, g: 25, b: 45 },
     text: 'Thunderstorm',
   },
   {
     name: 'ocean',
     title_templates: [
-      '{hours} Hours of Ocean Waves for Sleep',
-      'Ocean Sounds - Waves Crashing | {hours}h Sleep Aid',
+      '{hours} Hours of Ocean Waves for Sleep | Theta Waves',
+      'Ocean Sounds - Waves Crashing | {hours}h Binaural Beats',
       'Calm Ocean Waves for Deep Relaxation - {hours} Hours',
-      'Beach Waves at Night | {hours} Hours of Sea Sounds',
+      'Beach Waves at Night | {hours} Hours | 6Hz Theta',
     ],
-    description: 'Relax with {hours} hours of ocean wave sounds. Gentle waves crashing on shore — perfect for sleeping, meditation, and focus.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#ocean #waves #sleep #meditation #ambient',
-    tags: ['ocean waves', 'sea sounds', 'beach', 'waves crashing', 'sleep', 'meditation', 'ambient', 'nature sounds', 'relaxation'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.5"`,
-    audio_filter: 'lowpass=f=1200,volume=0.9',
+    description: 'Relax with {hours} hours of ocean wave sounds with embedded theta wave frequencies (6Hz) for meditation and drowsy relaxation. Layered audio: deep surf, gentle shore wash, and distant sea breeze.\n\nTheta binaural beats (left: 210Hz, right: 216Hz = 6Hz theta) promote the drowsy pre-sleep state and deep meditation.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#ocean #waves #thetawaves #meditation #binaural #ambient',
+    tags: ['ocean waves', 'sea sounds', 'theta waves', 'binaural beats', 'meditation', 'sleep', 'ambient', 'nature sounds', 'relaxation', 'beach'],
+    audio_inputs: (dur) => [
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.5"`,     // wave body
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.3"`,    // deep surf
+      `-f lavfi -i "sine=f=210:r=44100:d=${dur}"`,                  // left 210Hz
+      `-f lavfi -i "sine=f=216:r=44100:d=${dur}"`,                  // right 216Hz = 6Hz theta
+    ],
+    audio_filter_complex: `\
+      [0:a]lowpass=f=1500,highpass=f=100[waves];\
+      [1:a]lowpass=f=200,volume=0.8[surf];\
+      [2:a]volume=0.025[left];\
+      [3:a]volume=0.025[right];\
+      [left][right]join=inputs=2:channel_layout=stereo[binaural];\
+      [waves][surf]amix=inputs=2:weights=1 0.35[ocean_mix];\
+      [ocean_mix][binaural]amix=inputs=2:weights=1 0.12[aout]`,
     color: { r: 15, g: 50, b: 80 },
     text: 'Ocean Waves',
   },
   {
     name: 'fireplace',
     title_templates: [
-      '{hours} Hours of Crackling Fireplace for Relaxation',
-      'Cozy Fireplace Sounds | {hours}h for Sleep',
-      'Crackling Fire - {hours} Hours of Warmth',
+      '{hours} Hours of Crackling Fireplace | Alpha Waves',
+      'Cozy Fireplace Sounds | {hours}h Relaxation Frequency',
+      'Crackling Fire - {hours} Hours | 10Hz Alpha Binaural',
     ],
-    description: '{hours} hours of crackling fireplace ambiance. Cozy, warm, and perfect for relaxation, reading, or sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#fireplace #cozy #crackling #sleep #relaxation',
-    tags: ['fireplace', 'crackling fire', 'cozy', 'fire sounds', 'sleep', 'relaxation', 'ambient', 'warm'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.3"`,
-    audio_filter: 'highpass=f=200,lowpass=f=4000,volume=0.6',
+    description: '{hours} hours of crackling fireplace with embedded alpha wave frequencies (10Hz) for calm relaxation. Layered audio: crackle pops, warm ember hum, and soft wood shifts.\n\nAlpha binaural beats (left: 315Hz, right: 325Hz = 10Hz alpha) promote calm, alert relaxation — perfect for reading or unwinding.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#fireplace #cozy #alphawaves #binaural #relaxation',
+    tags: ['fireplace', 'crackling fire', 'alpha waves', 'binaural beats', 'cozy', 'relaxation', 'sleep', 'ambient', 'warm'],
+    audio_inputs: (dur) => [
+      `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.25"`,   // crackle
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.2"`,    // warm ember hum
+      `-f lavfi -i "sine=f=315:r=44100:d=${dur}"`,                  // left 315Hz
+      `-f lavfi -i "sine=f=325:r=44100:d=${dur}"`,                  // right 325Hz = 10Hz alpha
+    ],
+    audio_filter_complex: `\
+      [0:a]highpass=f=400,lowpass=f=6000,volume=0.5[crackle];\
+      [1:a]lowpass=f=300,volume=0.6[ember];\
+      [2:a]volume=0.02[left];\
+      [3:a]volume=0.02[right];\
+      [left][right]join=inputs=2:channel_layout=stereo[binaural];\
+      [crackle][ember]amix=inputs=2:weights=1 0.5[fire_mix];\
+      [fire_mix][binaural]amix=inputs=2:weights=1 0.1[aout]`,
     color: { r: 80, g: 30, b: 10 },
     text: 'Fireplace',
   },
   {
     name: 'wind',
     title_templates: [
-      '{hours} Hours of Wind Sounds for Sleep',
-      'Howling Wind - {hours} Hours of Ambient Sound',
-      'Winter Wind Sounds for Deep Sleep | {hours}h',
+      '{hours} Hours of Wind Sounds for Sleep | Delta Waves',
+      'Howling Wind - {hours} Hours | Binaural Sleep Aid',
+      'Winter Wind & Theta Waves for Deep Sleep | {hours}h',
     ],
-    description: '{hours} hours of wind blowing through trees. A natural ambient soundscape for sleeping, studying, or relaxing.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#wind #ambient #sleep #nature',
-    tags: ['wind sounds', 'howling wind', 'nature sounds', 'sleep', 'ambient', 'relaxation', 'winter wind'],
-    audio_cmd: (dur) => `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,
-    audio_filter: 'lowpass=f=500,volume=0.8',
+    description: '{hours} hours of wind through trees with embedded delta wave frequencies (3Hz) for deep sleep. Layered audio: low howling wind, higher gusts, and gentle leaf rustle.\n\nDelta binaural beats (left: 150Hz, right: 153Hz = 3Hz delta) guide your brainwaves into deep, restorative sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#wind #deltawaves #binaural #sleep #nature #ambient',
+    tags: ['wind sounds', 'howling wind', 'delta waves', 'binaural beats', 'deep sleep', 'ambient', 'relaxation', 'nature sounds'],
+    audio_inputs: (dur) => [
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,    // low howl
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.15"`,    // leaf rustle
+      `-f lavfi -i "sine=f=150:r=44100:d=${dur}"`,                  // left 150Hz
+      `-f lavfi -i "sine=f=153:r=44100:d=${dur}"`,                  // right 153Hz = 3Hz delta
+    ],
+    audio_filter_complex: `\
+      [0:a]lowpass=f=400,highpass=f=20[howl];\
+      [1:a]highpass=f=3000,lowpass=f=8000,volume=0.3[rustle];\
+      [2:a]volume=0.025[left];\
+      [3:a]volume=0.025[right];\
+      [left][right]join=inputs=2:channel_layout=stereo[binaural];\
+      [howl][rustle]amix=inputs=2:weights=1 0.25[wind_mix];\
+      [wind_mix][binaural]amix=inputs=2:weights=1 0.12[aout]`,
     color: { r: 50, g: 55, b: 65 },
     text: 'Wind Sounds',
   },
@@ -177,42 +238,43 @@ async function generateThumbnail(category, hours, outputPath) {
 }
 
 // ─── Visual Effects per Category ─────────────────────────
-// Each returns ffmpeg filter_complex args for animated visuals (tested, no drawtext/geq/rand)
+// Each returns the video portion of filter_complex (no -filter_complex flag, just the graph)
+// Uses internal lavfi color= sources so they don't conflict with -i audio inputs
 const VISUAL_EFFECTS = {
-  rain: (dur) => `-filter_complex "\
+  rain: (dur) => `\
     color=c=0x0a1628:s=1280x720:r=24:d=${dur},noise=alls=30:allf=t,eq=brightness=-0.1:contrast=1.1[dark];\
     color=c=black:s=1280x720:r=24:d=${dur},noise=alls=90:allf=t,eq=brightness=-0.4[speckle];\
     [speckle]boxblur=0:0:0:3[vstreaks];\
     [vstreaks]scroll=vertical=0.05:horizontal=0[falling];\
-    [dark][falling]blend=all_mode=screen:all_opacity=0.2[rain];\
-    [rain]vignette=PI/4[vout]"`,
-  thunder: (dur) => `-filter_complex "\
+    [dark][falling]blend=all_mode=screen:all_opacity=0.2[rain_v];\
+    [rain_v]vignette=PI/4[vout]`,
+  thunder: (dur) => `\
     color=c=0x080e1e:s=1280x720:r=24:d=${dur},noise=alls=45:allf=t,eq=brightness=-0.15:contrast=1.2[dark];\
     color=c=black:s=1280x720:r=24:d=${dur},noise=alls=95:allf=t,eq=brightness=-0.35[speckle];\
     [speckle]boxblur=0:0:0:4[vstreaks];\
     [vstreaks]scroll=vertical=0.06:horizontal=0[falling];\
     [dark][falling]blend=all_mode=screen:all_opacity=0.25[storm];\
-    [storm]vignette=PI/3.5[vout]"`,
-  ocean: (dur) => `-filter_complex "\
+    [storm]vignette=PI/3.5[vout]`,
+  ocean: (dur) => `\
     color=c=0x0a2840:s=1280x720:r=24:d=${dur},noise=alls=15:allf=t[noisy];\
-    color=c=0x0f3355:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t[waves];\
-    [noisy][waves]blend=all_mode=softlight:all_opacity=0.4[ocean];\
-    [ocean]eq=brightness=-0.05:contrast=1.05:saturation=1.3[blue];\
-    [blue]vignette=PI/4[vout]"`,
-  fireplace: (dur) => `-filter_complex "\
+    color=c=0x0f3355:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t[waves_v];\
+    [noisy][waves_v]blend=all_mode=softlight:all_opacity=0.4[ocean_v];\
+    [ocean_v]eq=brightness=-0.05:contrast=1.05:saturation=1.3[blue];\
+    [blue]vignette=PI/4[vout]`,
+  fireplace: (dur) => `\
     color=c=0x1a0800:s=1280x720:r=24:d=${dur},noise=alls=25:allf=t[noisy];\
     color=c=0x331100:s=1280x720:r=24:d=${dur},noise=alls=60:allf=t[flicker];\
     [noisy][flicker]blend=all_mode=screen:all_opacity=0.5[warm];\
     [warm]eq=brightness=0.05:contrast=1.1:saturation=1.5[fire];\
     [fire]colorbalance=rs=0.3:gs=-0.1:bs=-0.3:rm=0.2:gm=-0.05:bm=-0.2[orange];\
-    [orange]vignette=PI/3[vout]"`,
-  wind: (dur) => `-filter_complex "\
+    [orange]vignette=PI/3[vout]`,
+  wind: (dur) => `\
     color=c=0x1e2530:s=1280x720:r=24:d=${dur},noise=alls=35:allf=t[noisy];\
     color=c=0x2a3040:s=1280x720:r=24:d=${dur},noise=alls=25:allf=t[mist];\
     [noisy][mist]blend=all_mode=softlight:all_opacity=0.5[foggy];\
     [foggy]scroll=horizontal=0.001:vertical=0[drift];\
     [drift]eq=brightness=-0.05:contrast=1.05[grey];\
-    [grey]vignette=PI/4[vout]"`,
+    [grey]vignette=PI/4[vout]`,
 };
 
 // ─── Generate Audio/Video ─────────────────────────────────
@@ -220,15 +282,27 @@ function generateVideo(category, durationSecs, outputPath) {
   const chunkSecs = Math.min(durationSecs, 600);
   const visualFilter = VISUAL_EFFECTS[category.name](durationSecs);
 
-  const audioFilter = category.audio_filter || 'lowpass=f=800';
-  // Animated visual + audio (audio generated for chunk then looped)
+  // Multi-layered audio with binaural beats + animated visuals
+  const audioInputs = category.audio_inputs(chunkSecs).join(' ');
+  const loopCount = Math.ceil(durationSecs / chunkSecs);
+  const loopSize = chunkSecs * 44100;
+
+  // Add aloop to each audio stream for looping short chunks to full duration
+  const audioFilterComplex = category.audio_filter_complex
+    .replace(/\[0:a\]/g, `[0:a]aloop=loop=${loopCount}:size=${loopSize},`)
+    .replace(/\[1:a\]/g, `[1:a]aloop=loop=${loopCount}:size=${loopSize},`)
+    .replace(/\[2:a\]/g, `[2:a]aloop=loop=${loopCount}:size=${loopSize},`)
+    .replace(/\[3:a\]/g, `[3:a]aloop=loop=${loopCount}:size=${loopSize},`);
+
+  // Combine visual (lavfi color sources) + audio (file inputs) in one filter_complex
+  const combinedFilter = `${visualFilter};\n    ${audioFilterComplex}`;
+
   const fullCmd = `ffmpeg -y \
-    ${category.audio_cmd(chunkSecs)} \
-    ${visualFilter} \
-    -filter_complex "[0:a]${audioFilter},aloop=loop=${Math.ceil(durationSecs / chunkSecs)}:size=${chunkSecs * 44100}[aout]" \
+    ${audioInputs} \
+    -filter_complex "${combinedFilter}" \
     -map "[vout]" -map "[aout]" \
     -c:v libx264 -preset fast -crf 23 \
-    -c:a aac -b:a 192k \
+    -c:a aac -b:a 192k -ac 2 \
     -t ${durationSecs} \
     -shortest \
     "${outputPath}" 2>&1`;
@@ -237,8 +311,8 @@ function generateVideo(category, durationSecs, outputPath) {
     execSync(fullCmd, { timeout: 1800000, maxBuffer: 50 * 1024 * 1024 });
     return true;
   } catch (e) {
-    console.error('[YouTube] ffmpeg animated failed:', e.message?.slice(0, 300));
-    // Fallback: simple noise + vignette
+    console.error('[YouTube] ffmpeg layered failed:', e.message?.slice(0, 300));
+    // Fallback: simple brown noise + vignette (no binaural)
     try {
       const { r, g, b } = category.color;
       const colorHex = `${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
