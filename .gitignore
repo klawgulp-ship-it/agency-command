@@ -5,3 +5,5 @@ data/*.db
 .DS_Store
 npm-packages/.npmrc
 github-action/
+server/data/yt-temp/
+.railwayignore
