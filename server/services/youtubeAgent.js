@@ -44,26 +44,32 @@ const CATEGORIES = [
       'Rain on Window - {hours} Hours for Deep Sleep & Relaxation',
       'Rain on Tin Roof - {hours} Hours | Sleep Frequency Embedded',
     ],
-    description: 'Fall asleep fast with {hours} hours of heavy rain sounds with embedded delta wave frequencies (2Hz) for deep sleep induction. Multiple rain layers: heavy downpour, distant patter, and roof drips blended for maximum realism.\n\nContains subtle binaural beats (left: 200Hz, right: 202Hz = 2Hz delta) beneath the rain — your brain naturally syncs to deep sleep frequency.\n\nSubscribe for more ambient sounds\nSupport: https://snipelink.com\n\n#rain #sleep #deltawaves #binaural #ambient #whitenoise',
+    description: 'Fall asleep fast with {hours} hours of heavy rain sounds with embedded delta wave frequencies (2Hz) for deep sleep induction. 7 audio layers: heavy downpour, mid-range patter, roof drips, distant rumble, close splashes, and sub-perceptual binaural beats.\n\nContains subtle binaural beats (left: 200Hz, right: 202Hz = 2Hz delta) beneath the rain — your brain naturally syncs to deep sleep frequency.\n\nSubscribe for more ambient sounds\nSupport: https://snipelink.com\n\n#rain #sleep #deltawaves #binaural #ambient #whitenoise',
     tags: ['rain sounds', 'sleep', 'delta waves', 'binaural beats', 'ambient', 'rain for sleeping', 'heavy rain', 'deep sleep', 'nature sounds', 'ASMR', 'sleep frequency'],
-    // 5 inputs: rain body, light patter, distant rumble, binaural L+R
+    // 7 inputs: rain body, patter, drips, rumble, close splashes, binaural L+R
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.6"`,    // heavy rain body
-      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.2"`,     // light patter/drips
-      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.15"`,   // distant rumble
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.2"`,     // mid-range patter
+      `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.08"`,   // high-freq drips/ticks
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.15"`,   // distant bass rumble
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.12"`,    // close splashes
       `-f lavfi -i "sine=f=200:r=44100:d=${dur}"`,                  // binaural left 200Hz
       `-f lavfi -i "sine=f=202:r=44100:d=${dur}"`,                  // binaural right 202Hz = 2Hz delta
     ],
     audio_filter_complex: `\
-      [0:a]lowpass=f=700,highpass=f=35,volume='0.75+0.12*sin(2*PI*t/50)':eval=frame[body];\
-      [1:a]highpass=f=2500,lowpass=f=7000,volume='0.2+0.08*sin(2*PI*t/35)':eval=frame[patter];\
-      [2:a]lowpass=f=120,volume='0.3+0.25*sin(2*PI*t/70)':eval=frame[rumble];\
-      [3:a]volume=0.03[left];\
-      [4:a]volume=0.03[right];\
+      [0:a]lowpass=f=700,highpass=f=35,volume='0.75+0.10*sin(2*PI*t/50)+0.05*sin(2*PI*t/137)':eval=frame,aecho=0.8:0.88:120:0.15[body];\
+      [1:a]highpass=f=1800,lowpass=f=6000,volume='0.22+0.07*sin(2*PI*t/35)+0.04*sin(2*PI*t/97)':eval=frame[patter];\
+      [2:a]highpass=f=5000,lowpass=f=12000,volume='0.06+0.04*sin(2*PI*t/11)+0.02*sin(2*PI*t/43)':eval=frame[drips];\
+      [3:a]lowpass=f=100,highpass=f=15,volume='0.35+0.20*sin(2*PI*t/70)+0.10*sin(2*PI*t/200)':eval=frame[rumble];\
+      [4:a]bandpass=f=800:width_type=o:w=1.5,volume='0.10+0.06*sin(2*PI*t/23)+0.03*sin(2*PI*t/67)':eval=frame,aecho=0.6:0.7:80:0.12[splash];\
+      [5:a]volume=0.012[left];\
+      [6:a]volume=0.012[right];\
       [left][right]join=inputs=2:channel_layout=stereo[binaural];\
       [body][patter]amix=inputs=2:weights=1 0.3[mx1];\
-      [mx1][rumble]amix=inputs=2:weights=1 0.15[mx2];\
-      [mx2][binaural]amix=inputs=2:weights=1 0.12[aout]`,
+      [mx1][drips]amix=inputs=2:weights=1 0.2[mx2];\
+      [mx2][rumble]amix=inputs=2:weights=1 0.18[mx3];\
+      [mx3][splash]amix=inputs=2:weights=1 0.12[mx4];\
+      [mx4][binaural]amix=inputs=2:weights=1 0.08[aout]`,
     color: { r: 30, g: 40, b: 60 },
     text: 'Rain Sounds',
   },
@@ -75,25 +81,31 @@ const CATEGORIES = [
       'Intense Thunderstorm with Rain | {hours} Hours',
       'Rolling Thunder for Relaxation - {hours} Hours | 2Hz Delta',
     ],
-    description: '{hours} hours of powerful thunderstorm with layered rain, distant thunder rumble, and embedded delta wave frequencies (2Hz binaural beats) for deep sleep.\n\n3 audio layers: heavy rain, deep sub-bass rumble (thunder), and imperceptible 2Hz delta binaural beats that guide your brain into stage 3/4 deep sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#thunder #storm #deltawaves #sleep #binaural #ambient',
+    description: '{hours} hours of powerful thunderstorm with 7 layered audio: driving rain, high-freq detail, deep sub-bass thunder, mid-range rolling thunder, wind gusts, and sub-perceptual 2Hz delta binaural beats for stage 3/4 deep sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#thunder #storm #deltawaves #sleep #binaural #ambient',
     tags: ['thunderstorm', 'thunder sounds', 'storm', 'delta waves', 'binaural beats', 'sleep sounds', 'deep sleep', 'ambient', 'relaxation'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.7"`,    // rain body
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.15"`,    // high freq rain detail
-      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,    // deep thunder rumble
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,    // deep sub-bass thunder
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.25"`,   // mid-range rolling thunder
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.1"`,     // wind gusts
       `-f lavfi -i "sine=f=174:r=44100:d=${dur}"`,                  // left 174Hz (solfeggio)
       `-f lavfi -i "sine=f=176:r=44100:d=${dur}"`,                  // right 176Hz = 2Hz delta
     ],
     audio_filter_complex: `\
-      [0:a]lowpass=f=600,highpass=f=25,volume='0.8+0.15*sin(2*PI*t/40)':eval=frame[rain];\
-      [1:a]highpass=f=3000,lowpass=f=6000,volume='0.15+0.1*sin(2*PI*t/25)':eval=frame[detail];\
-      [2:a]lowpass=f=80,volume='1.0+0.8*sin(2*PI*t/90)':eval=frame[rumble];\
-      [3:a]volume=0.03[left];\
-      [4:a]volume=0.03[right];\
+      [0:a]lowpass=f=600,highpass=f=25,volume='0.8+0.12*sin(2*PI*t/40)+0.06*sin(2*PI*t/113)':eval=frame,aecho=0.8:0.85:150:0.18[rain];\
+      [1:a]highpass=f=3000,lowpass=f=6000,volume='0.15+0.08*sin(2*PI*t/25)+0.05*sin(2*PI*t/83)':eval=frame[detail];\
+      [2:a]lowpass=f=60,highpass=f=10,volume='0.8+0.7*sin(2*PI*t/90)+0.4*sin(2*PI*t/250)':eval=frame,aecho=0.9:0.9:400:0.25[deepthunder];\
+      [3:a]bandpass=f=200:width_type=o:w=1.2,volume='0.3+0.25*sin(2*PI*t/120)+0.15*sin(2*PI*t/300)':eval=frame,aecho=0.7:0.8:250:0.2[rollthunder];\
+      [4:a]highpass=f=150,lowpass=f=2000,volume='0.08+0.06*sin(2*PI*t/45)+0.04*sin(2*PI*t/160)':eval=frame[gusts];\
+      [5:a]volume=0.012[left];\
+      [6:a]volume=0.012[right];\
       [left][right]join=inputs=2:channel_layout=stereo[binaural];\
       [rain][detail]amix=inputs=2:weights=1 0.2[mx1];\
-      [mx1][rumble]amix=inputs=2:weights=1 0.35[mx2];\
-      [mx2][binaural]amix=inputs=2:weights=1 0.12[aout]`,
+      [mx1][deepthunder]amix=inputs=2:weights=1 0.35[mx2];\
+      [mx2][rollthunder]amix=inputs=2:weights=1 0.2[mx3];\
+      [mx3][gusts]amix=inputs=2:weights=1 0.12[mx4];\
+      [mx4][binaural]amix=inputs=2:weights=1 0.08[aout]`,
     color: { r: 20, g: 25, b: 45 },
     text: 'Thunderstorm',
   },
@@ -105,25 +117,31 @@ const CATEGORIES = [
       'Calm Ocean Waves for Deep Relaxation - {hours} Hours',
       'Beach Waves at Night | {hours} Hours | 6Hz Theta',
     ],
-    description: 'Relax with {hours} hours of ocean wave sounds with embedded theta wave frequencies (6Hz) for meditation and drowsy relaxation. Layered audio: deep surf, gentle shore wash, and distant sea breeze.\n\nTheta binaural beats (left: 210Hz, right: 216Hz = 6Hz theta) promote the drowsy pre-sleep state and deep meditation.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#ocean #waves #thetawaves #meditation #binaural #ambient',
+    description: 'Relax with {hours} hours of ocean wave sounds with embedded theta wave frequencies (6Hz) for meditation. 7 layers: deep surf, shore wash, foam fizz, pebble undertow, distant seabirds, and sub-perceptual theta binaural beats.\n\nTheta binaural beats (210Hz/216Hz = 6Hz theta) promote the drowsy pre-sleep state and deep meditation.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#ocean #waves #thetawaves #meditation #binaural #ambient',
     tags: ['ocean waves', 'sea sounds', 'theta waves', 'binaural beats', 'meditation', 'sleep', 'ambient', 'nature sounds', 'relaxation', 'beach'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.5"`,     // wave wash
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.3"`,    // deep surf undertow
-      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.1"`,     // foam/fizz
+      `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.06"`,   // foam/fizz high freq
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.1"`,    // pebble/gravel drag
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.04"`,    // distant wind/seabirds
       `-f lavfi -i "sine=f=210:r=44100:d=${dur}"`,                  // left 210Hz
       `-f lavfi -i "sine=f=216:r=44100:d=${dur}"`,                  // right 216Hz = 6Hz theta
     ],
     audio_filter_complex: `\
-      [0:a]lowpass=f=1200,highpass=f=80,volume='0.6+0.3*sin(2*PI*t/18)':eval=frame[waves];\
-      [1:a]lowpass=f=180,volume='0.5+0.4*sin(2*PI*t/22)':eval=frame[surf];\
-      [2:a]highpass=f=4000,lowpass=f=10000,volume='0.08+0.06*sin(2*PI*t/15)':eval=frame[foam];\
-      [3:a]volume=0.025[left];\
-      [4:a]volume=0.025[right];\
+      [0:a]lowpass=f=1200,highpass=f=80,volume='0.6+0.25*sin(2*PI*t/18)+0.12*sin(2*PI*t/47)':eval=frame,aecho=0.7:0.8:200:0.15[waves];\
+      [1:a]lowpass=f=180,highpass=f=15,volume='0.5+0.35*sin(2*PI*t/22)+0.15*sin(2*PI*t/61)':eval=frame[surf];\
+      [2:a]highpass=f=5000,lowpass=f=14000,volume='0.05+0.04*sin(2*PI*t/15)+0.02*sin(2*PI*t/37)':eval=frame[foam];\
+      [3:a]bandpass=f=400:width_type=o:w=1.8,volume='0.08+0.06*sin(2*PI*t/20)+0.03*sin(2*PI*t/53)':eval=frame[pebble];\
+      [4:a]highpass=f=2500,lowpass=f=6000,volume='0.03+0.02*sin(2*PI*t/90)+0.01*sin(2*PI*t/210)':eval=frame[wind];\
+      [5:a]volume=0.010[left];\
+      [6:a]volume=0.010[right];\
       [left][right]join=inputs=2:channel_layout=stereo[binaural];\
       [waves][surf]amix=inputs=2:weights=1 0.35[mx1];\
       [mx1][foam]amix=inputs=2:weights=1 0.15[mx2];\
-      [mx2][binaural]amix=inputs=2:weights=1 0.12[aout]`,
+      [mx2][pebble]amix=inputs=2:weights=1 0.1[mx3];\
+      [mx3][wind]amix=inputs=2:weights=1 0.06[mx4];\
+      [mx4][binaural]amix=inputs=2:weights=1 0.06[aout]`,
     color: { r: 15, g: 50, b: 80 },
     text: 'Ocean Waves',
   },
@@ -134,25 +152,31 @@ const CATEGORIES = [
       'Cozy Fireplace Sounds | {hours}h Relaxation Frequency',
       'Crackling Fire - {hours} Hours | 10Hz Alpha Binaural',
     ],
-    description: '{hours} hours of crackling fireplace with embedded alpha wave frequencies (10Hz) for calm relaxation. Layered audio: crackle pops, warm ember hum, and soft wood shifts.\n\nAlpha binaural beats (left: 315Hz, right: 325Hz = 10Hz alpha) promote calm, alert relaxation — perfect for reading or unwinding.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#fireplace #cozy #alphawaves #binaural #relaxation',
+    description: '{hours} hours of crackling fireplace with embedded alpha wave frequencies (10Hz) for calm relaxation. 7 layers: sharp crackle pops, warm ember drone, wood shifts, deep hearth resonance, soft ash settling, and sub-perceptual alpha binaural beats.\n\nAlpha binaural beats (315Hz/325Hz = 10Hz alpha) promote calm, alert relaxation — perfect for reading or unwinding.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#fireplace #cozy #alphawaves #binaural #relaxation',
     tags: ['fireplace', 'crackling fire', 'alpha waves', 'binaural beats', 'cozy', 'relaxation', 'sleep', 'ambient', 'warm'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.25"`,   // crackle pops
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.2"`,    // warm ember hum
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.08"`,    // wood shift detail
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.12"`,   // deep hearth resonance
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.04"`,    // ash/settling
       `-f lavfi -i "sine=f=315:r=44100:d=${dur}"`,                  // left 315Hz
       `-f lavfi -i "sine=f=325:r=44100:d=${dur}"`,                  // right 325Hz = 10Hz alpha
     ],
     audio_filter_complex: `\
-      [0:a]highpass=f=500,lowpass=f=5000,volume='0.4+0.15*sin(2*PI*t/8)':eval=frame[crackle];\
-      [1:a]lowpass=f=250,volume='0.5+0.1*sin(2*PI*t/45)':eval=frame[ember];\
-      [2:a]bandpass=f=1500:width_type=o:w=2,volume='0.06+0.04*sin(2*PI*t/12)':eval=frame[wood];\
-      [3:a]volume=0.02[left];\
-      [4:a]volume=0.02[right];\
+      [0:a]highpass=f=800,lowpass=f=6000,volume='0.4+0.12*sin(2*PI*t/6)+0.08*sin(2*PI*t/19)+0.05*sin(2*PI*t/53)':eval=frame[crackle];\
+      [1:a]lowpass=f=250,highpass=f=20,volume='0.5+0.08*sin(2*PI*t/45)+0.04*sin(2*PI*t/130)':eval=frame[ember];\
+      [2:a]bandpass=f=1500:width_type=o:w=2,volume='0.06+0.04*sin(2*PI*t/9)+0.02*sin(2*PI*t/31)':eval=frame[wood];\
+      [3:a]lowpass=f=120,highpass=f=15,volume='0.15+0.06*sin(2*PI*t/60)+0.03*sin(2*PI*t/180)':eval=frame,aecho=0.8:0.85:300:0.2[hearth];\
+      [4:a]highpass=f=3000,lowpass=f=8000,volume='0.03+0.02*sin(2*PI*t/15)+0.01*sin(2*PI*t/41)':eval=frame[ash];\
+      [5:a]volume=0.010[left];\
+      [6:a]volume=0.010[right];\
       [left][right]join=inputs=2:channel_layout=stereo[binaural];\
       [crackle][ember]amix=inputs=2:weights=1 0.5[mx1];\
       [mx1][wood]amix=inputs=2:weights=1 0.15[mx2];\
-      [mx2][binaural]amix=inputs=2:weights=1 0.1[aout]`,
+      [mx2][hearth]amix=inputs=2:weights=1 0.12[mx3];\
+      [mx3][ash]amix=inputs=2:weights=1 0.06[mx4];\
+      [mx4][binaural]amix=inputs=2:weights=1 0.06[aout]`,
     color: { r: 80, g: 30, b: 10 },
     text: 'Fireplace',
   },
@@ -163,25 +187,31 @@ const CATEGORIES = [
       'Howling Wind - {hours} Hours | Binaural Sleep Aid',
       'Winter Wind & Theta Waves for Deep Sleep | {hours}h',
     ],
-    description: '{hours} hours of wind through trees with embedded delta wave frequencies (3Hz) for deep sleep. Layered audio: low howling wind, higher gusts, and gentle leaf rustle.\n\nDelta binaural beats (left: 150Hz, right: 153Hz = 3Hz delta) guide your brainwaves into deep, restorative sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#wind #deltawaves #binaural #sleep #nature #ambient',
+    description: '{hours} hours of wind through trees with embedded delta wave frequencies (3Hz) for deep sleep. 7 layers: low howling wind, leaf rustle, deep gusts, chimney whistle, distant creaking, and sub-perceptual delta binaural beats.\n\nDelta binaural beats (150Hz/153Hz = 3Hz delta) guide your brainwaves into deep, restorative sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#wind #deltawaves #binaural #sleep #nature #ambient',
     tags: ['wind sounds', 'howling wind', 'delta waves', 'binaural beats', 'deep sleep', 'ambient', 'relaxation', 'nature sounds'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,    // low howl
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.15"`,    // leaf rustle
-      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.1"`,    // deep gusts
+      `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.15"`,   // deep gusts
+      `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.05"`,   // chimney/gap whistle
+      `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.06"`,    // distant creaking/branches
       `-f lavfi -i "sine=f=150:r=44100:d=${dur}"`,                  // left 150Hz
       `-f lavfi -i "sine=f=153:r=44100:d=${dur}"`,                  // right 153Hz = 3Hz delta
     ],
     audio_filter_complex: `\
-      [0:a]lowpass=f=350,highpass=f=15,volume='0.6+0.25*sin(2*PI*t/55)':eval=frame[howl];\
-      [1:a]highpass=f=3000,lowpass=f=8000,volume='0.2+0.12*sin(2*PI*t/30)':eval=frame[rustle];\
-      [2:a]lowpass=f=100,volume='0.3+0.5*sin(2*PI*t/80)':eval=frame[gust];\
-      [3:a]volume=0.025[left];\
-      [4:a]volume=0.025[right];\
+      [0:a]lowpass=f=350,highpass=f=15,volume='0.6+0.20*sin(2*PI*t/55)+0.10*sin(2*PI*t/170)':eval=frame,aecho=0.8:0.88:250:0.15[howl];\
+      [1:a]highpass=f=3000,lowpass=f=8000,volume='0.2+0.10*sin(2*PI*t/30)+0.05*sin(2*PI*t/85)':eval=frame[rustle];\
+      [2:a]lowpass=f=100,highpass=f=10,volume='0.3+0.40*sin(2*PI*t/80)+0.20*sin(2*PI*t/230)':eval=frame[gust];\
+      [3:a]bandpass=f=2200:width_type=o:w=0.8,volume='0.04+0.03*sin(2*PI*t/40)+0.02*sin(2*PI*t/110)':eval=frame[whistle];\
+      [4:a]bandpass=f=600:width_type=o:w=1.5,volume='0.05+0.03*sin(2*PI*t/25)+0.02*sin(2*PI*t/70)':eval=frame[creak];\
+      [5:a]volume=0.010[left];\
+      [6:a]volume=0.010[right];\
       [left][right]join=inputs=2:channel_layout=stereo[binaural];\
       [howl][rustle]amix=inputs=2:weights=1 0.25[mx1];\
       [mx1][gust]amix=inputs=2:weights=1 0.2[mx2];\
-      [mx2][binaural]amix=inputs=2:weights=1 0.12[aout]`,
+      [mx2][whistle]amix=inputs=2:weights=1 0.08[mx3];\
+      [mx3][creak]amix=inputs=2:weights=1 0.06[mx4];\
+      [mx4][binaural]amix=inputs=2:weights=1 0.06[aout]`,
     color: { r: 50, g: 55, b: 65 },
     text: 'Wind Sounds',
   },
@@ -264,50 +294,64 @@ const VISUAL_EFFECTS = {
     [drops2]boxblur=0:0:0:5,scroll=vertical=0.07:horizontal=0.001[rain2];\
     color=c=black:s=1280x720:r=24:d=${dur},noise=alls=40:allf=t,eq=brightness=-0.55[drops3];\
     [drops3]boxblur=0:0:0:8,scroll=vertical=0.025:horizontal=-0.0005[rain3];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=95:allf=t,eq=brightness=-0.6[drops4];\
+    [drops4]boxblur=0:0:0:1,scroll=vertical=0.1:horizontal=0.002[rain4];\
     [base][rain1]blend=all_mode=screen:all_opacity=0.15[l1];\
     [l1][rain2]blend=all_mode=screen:all_opacity=0.1[l2];\
     [l2][rain3]blend=all_mode=screen:all_opacity=0.07[l3];\
-    [l3]eq=brightness=0.015*sin(2*PI*t/40):eval=frame[breathe];\
-    [breathe]vignette=PI/4[vout]`,
+    [l3][rain4]blend=all_mode=screen:all_opacity=0.04[l4];\
+    [l4]eq=brightness=0.012*sin(2*PI*t/40)+0.006*sin(2*PI*t/137):saturation=1.0+0.08*sin(2*PI*t/90):eval=frame[breathe];\
+    [breathe]colorbalance=bs=0.06:bm=0.03[tint];\
+    [tint]vignette=PI/4[vout]`,
   thunder: (dur) => `\
     color=c=0x060c1a:s=1280x720:r=24:d=${dur},noise=alls=35:allf=t[base];\
     color=c=black:s=1280x720:r=24:d=${dur},noise=alls=90:allf=t,eq=brightness=-0.4[drops1];\
     [drops1]boxblur=0:0:0:3,scroll=vertical=0.05:horizontal=0[rain1];\
     color=c=black:s=1280x720:r=24:d=${dur},noise=alls=70:allf=t,eq=brightness=-0.45[drops2];\
     [drops2]boxblur=0:0:0:6,scroll=vertical=0.08:horizontal=0.001[rain2];\
-    color=c=0x222840:s=1280x720:r=24:d=${dur},noise=alls=15:allf=t[flash_base];\
+    color=c=0x101830:s=1280x720:r=24:d=${dur},noise=alls=50:allf=t,eq=brightness=-0.5[drops3];\
+    [drops3]boxblur=0:0:0:10,scroll=vertical=0.035:horizontal=-0.001[rain3];\
     [base][rain1]blend=all_mode=screen:all_opacity=0.18[l1];\
     [l1][rain2]blend=all_mode=screen:all_opacity=0.12[l2];\
-    [l2][flash_base]blend=all_mode=screen:all_opacity=0.03*abs(sin(2*PI*t/25)):eval=frame[l3];\
-    [l3]eq=brightness=0.04*sin(2*PI*t/25)*sin(2*PI*t/25):eval=frame[flash];\
-    [flash]vignette=PI/3.5[vout]`,
+    [l2][rain3]blend=all_mode=screen:all_opacity=0.06[l3];\
+    [l3]eq=brightness=0.04*sin(2*PI*t/35)*sin(2*PI*t/35)*sin(2*PI*t/35)*sin(2*PI*t/35)+0.01*sin(2*PI*t/90):eval=frame[lit];\
+    [lit]colorbalance=bs=0.08:bh=0.05[tint];\
+    [tint]vignette=PI/3.5[vout]`,
   ocean: (dur) => `\
     color=c=0x071e35:s=1280x720:r=24:d=${dur},noise=alls=12:allf=t[deep];\
     color=c=0x0c3050:s=1280x720:r=24:d=${dur},noise=alls=18:allf=t[surface];\
     color=c=0x1a4a70:s=1280x720:r=24:d=${dur},noise=alls=8:allf=t[foam];\
+    color=c=0x0a3560:s=1280x720:r=24:d=${dur},noise=alls=6:allf=t[shimmer];\
     [deep][surface]blend=all_mode=softlight:all_opacity=0.35[water];\
-    [water][foam]blend=all_mode=screen:all_opacity=0.05[ocean_v];\
-    [ocean_v]scroll=horizontal=0.002:vertical=0[drift];\
-    [drift]eq=brightness=0.02*sin(2*PI*t/20):saturation=1.1+0.1*sin(2*PI*t/50):eval=frame[breathe];\
-    [breathe]vignette=PI/4[vout]`,
+    [water][foam]blend=all_mode=screen:all_opacity=0.05[ocean1];\
+    [ocean1][shimmer]blend=all_mode=overlay:all_opacity=0.04[ocean2];\
+    [ocean2]scroll=horizontal=0.002:vertical=0[drift];\
+    [drift]eq=brightness=0.018*sin(2*PI*t/20)+0.008*sin(2*PI*t/53):saturation=1.1+0.08*sin(2*PI*t/50):eval=frame[breathe];\
+    [breathe]colorbalance=bs=0.08:bm=0.05:gs=-0.02[tint];\
+    [tint]vignette=PI/4[vout]`,
   fireplace: (dur) => `\
     color=c=0x120600:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t[dark_base];\
     color=c=0x2a0e00:s=1280x720:r=24:d=${dur},noise=alls=55:allf=t[flicker1];\
     color=c=0x401800:s=1280x720:r=24:d=${dur},noise=alls=35:allf=t[flicker2];\
+    color=c=0x601800:s=1280x720:r=24:d=${dur},noise=alls=70:allf=t[spark];\
     [dark_base][flicker1]blend=all_mode=screen:all_opacity=0.4[warm1];\
     [warm1][flicker2]blend=all_mode=screen:all_opacity=0.2[warm2];\
-    [warm2]eq=brightness=0.06*sin(2*PI*t/3)+0.02*sin(2*PI*t/7):contrast=1.1:saturation=1.6:eval=frame[glow];\
-    [glow]colorbalance=rs=0.35:gs=-0.1:bs=-0.3:rm=0.25:gm=-0.05:bm=-0.25[orange];\
+    [warm2][spark]blend=all_mode=screen:all_opacity=0.04[warm3];\
+    [warm3]eq=brightness=0.05*sin(2*PI*t/3)+0.03*sin(2*PI*t/7)+0.015*sin(2*PI*t/19):contrast=1.1+0.05*sin(2*PI*t/11):saturation=1.6+0.2*sin(2*PI*t/13):eval=frame[glow];\
+    [glow]colorbalance=rs=0.4:gs=-0.1:bs=-0.3:rm=0.28:gm=-0.05:bm=-0.25[orange];\
     [orange]vignette=PI/3[vout]`,
   wind: (dur) => `\
     color=c=0x151a22:s=1280x720:r=24:d=${dur},noise=alls=30:allf=t[base];\
     color=c=0x1e2530:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t[mist1];\
     color=c=0x252d3a:s=1280x720:r=24:d=${dur},noise=alls=15:allf=t[mist2];\
+    color=c=0x1a2035:s=1280x720:r=24:d=${dur},noise=alls=10:allf=t[mist3];\
     [base][mist1]blend=all_mode=softlight:all_opacity=0.4[fog1];\
     [fog1][mist2]blend=all_mode=screen:all_opacity=0.08[fog2];\
-    [fog2]scroll=horizontal=0.003:vertical=0.0005[drift];\
-    [drift]eq=brightness=0.01*sin(2*PI*t/60):eval=frame[breathe];\
-    [breathe]vignette=PI/4[vout]`,
+    [fog2][mist3]blend=all_mode=overlay:all_opacity=0.05[fog3];\
+    [fog3]scroll=horizontal=0.003:vertical=0.0005[drift];\
+    [drift]eq=brightness=0.01*sin(2*PI*t/60)+0.005*sin(2*PI*t/170):saturation=1.0+0.05*sin(2*PI*t/80):eval=frame[breathe];\
+    [breathe]colorbalance=bs=0.04:bm=0.02[tint];\
+    [tint]vignette=PI/4[vout]`,
 };
 
 // ─── Generate Audio/Video ─────────────────────────────────

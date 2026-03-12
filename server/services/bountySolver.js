@@ -62,6 +62,7 @@ async function generateBountyPaymentLink(bountyId, reward, title) {
 const GH_CACHE = new Map(); // path -> { data, expiresAt }
 const GH_CACHE_TTL = 30 * 60 * 1000; // 30 min for stable data
 let ghRateRemaining = 5000;
+let ghRateResetAt = 0;
 
 function gh(path, options = {}) {
   const token = process.env.GITHUB_TOKEN;
@@ -78,10 +79,19 @@ function gh(path, options = {}) {
     }
   }
 
-  // Pause if rate limited
-  if (ghRateRemaining < 100) {
-    console.warn(`[GH] Rate limit low: ${ghRateRemaining} remaining — pausing`);
-    return new Promise(resolve => setTimeout(resolve, 60000)).then(() => gh(path, options));
+  // Pause if rate limited — but check reset time instead of infinite retry
+  if (ghRateRemaining < 5) {
+    const resetAt = ghRateResetAt || (Date.now() + 3600000);
+    const waitMs = Math.max(0, resetAt - Date.now()) + 5000;
+    if (waitMs > 3600000) {
+      console.warn(`[GH] Rate limit exhausted, reset too far away (${Math.round(waitMs/60000)}m) — skipping call to ${path}`);
+      throw new Error('GitHub rate limit exhausted');
+    }
+    console.warn(`[GH] Rate limit at ${ghRateRemaining} — waiting ${Math.round(waitMs/1000)}s for reset`);
+    return new Promise(resolve => setTimeout(resolve, waitMs)).then(() => {
+      ghRateRemaining = 100; // Assume reset happened
+      return gh(path, options);
+    });
   }
 
   return fetch(`${GITHUB_API}${path}`, {
@@ -98,6 +108,8 @@ function gh(path, options = {}) {
     // Track rate limit
     const remaining = r.headers.get('x-ratelimit-remaining');
     if (remaining) ghRateRemaining = parseInt(remaining, 10);
+    const resetHeader = r.headers.get('x-ratelimit-reset');
+    if (resetHeader) ghRateResetAt = parseInt(resetHeader, 10) * 1000;
 
     const data = await r.json().catch(() => ({}));
     if (!r.ok) {
