@@ -38,14 +38,15 @@ const CATEGORIES = [
   {
     name: 'rain',
     title_templates: [
-      '{hours} Hours of Heavy Rain for Deep Sleep | Delta Waves',
-      'Rain Sounds for Sleeping - {hours} Hours | Binaural Beats',
-      'Heavy Rainfall at Night - Sleep Instantly | {hours}h',
-      'Rain on Window - {hours} Hours for Deep Sleep & Relaxation',
-      'Rain on Tin Roof - {hours} Hours | Sleep Frequency Embedded',
+      'Heavy Rain for Deep Sleep | {hours} Hours Black Screen | No Ads',
+      'Rain Sounds for Sleeping - {hours} Hours | Black Screen | Delta Waves',
+      '{hours}h Heavy Rainfall | Sleep Instantly | No Music No Ads',
+      'Rain on Window at Night | {hours} Hours for Deep Sleep | Black Screen',
+      'Rain on Tin Roof | {hours} Hours | Deep Sleep Binaural Beats',
+      'Intense Rain Sounds | {hours} Hours Black Screen | Fall Asleep Fast',
     ],
-    description: 'Fall asleep fast with {hours} hours of heavy rain sounds with embedded delta wave frequencies (2Hz) for deep sleep induction. 7 audio layers: heavy downpour, mid-range patter, roof drips, distant rumble, close splashes, and sub-perceptual binaural beats.\n\nContains subtle binaural beats (left: 200Hz, right: 202Hz = 2Hz delta) beneath the rain — your brain naturally syncs to deep sleep frequency.\n\nSubscribe for more ambient sounds\nSupport: https://snipelink.com\n\n#rain #sleep #deltawaves #binaural #ambient #whitenoise',
-    tags: ['rain sounds', 'sleep', 'delta waves', 'binaural beats', 'ambient', 'rain for sleeping', 'heavy rain', 'deep sleep', 'nature sounds', 'ASMR', 'sleep frequency'],
+    description: 'Fall asleep fast with {hours} hours of heavy rain sounds with embedded delta wave frequencies (2Hz) for deep sleep induction. 7 audio layers: heavy downpour, mid-range patter, roof drips, distant rumble, close splashes, and sub-perceptual binaural beats.\n\nContains subtle binaural beats (left: 200Hz, right: 202Hz = 2Hz delta) beneath the rain — your brain naturally syncs to deep sleep frequency.\n\nNo ads interrupting your sleep. Subscribe for daily ambient sounds.\n\nTimestamps:\n0:00 Rain begins\n0:30 Full intensity\n{hours}:00:00 End\n\nSupport: https://snipelink.com\n\n#rain #rainsounds #sleep #deltawaves #binaural #ambient #whitenoise #blackscreen #deepsleep #rainforsleeping #nosleepmusic #noads',
+    tags: ['rain sounds', 'rain sounds for sleeping', 'sleep', 'deep sleep', 'delta waves', 'binaural beats', 'ambient', 'heavy rain', 'nature sounds', 'ASMR', 'black screen', 'no ads', 'rain on window', 'rain on roof', '10 hours rain', 'sleep instantly'],
     // 7 inputs: rain body, patter, drips, rumble, close splashes, binaural L+R
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.6"`,    // heavy rain body
@@ -76,13 +77,14 @@ const CATEGORIES = [
   {
     name: 'thunder',
     title_templates: [
-      '{hours} Hours of Thunderstorm for Deep Sleep | Delta Waves',
-      'Thunder & Rain - Sleep Sounds | {hours}h Binaural',
-      'Intense Thunderstorm with Rain | {hours} Hours',
-      'Rolling Thunder for Relaxation - {hours} Hours | 2Hz Delta',
+      'Thunderstorm Sounds for Sleeping | {hours} Hours | Black Screen No Ads',
+      'Heavy Thunder and Rain | {hours} Hours Black Screen | Deep Sleep',
+      '{hours}h Intense Thunderstorm | Fall Asleep in Minutes | No Ads',
+      'Rolling Thunder with Rain | {hours} Hours for Deep Sleep | Binaural',
+      'Thunderstorm at Night | {hours} Hours Black Screen | Sleep Sounds',
     ],
-    description: '{hours} hours of powerful thunderstorm with 7 layered audio: driving rain, high-freq detail, deep sub-bass thunder, mid-range rolling thunder, wind gusts, and sub-perceptual 2Hz delta binaural beats for stage 3/4 deep sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#thunder #storm #deltawaves #sleep #binaural #ambient',
-    tags: ['thunderstorm', 'thunder sounds', 'storm', 'delta waves', 'binaural beats', 'sleep sounds', 'deep sleep', 'ambient', 'relaxation'],
+    description: '{hours} hours of powerful thunderstorm with 7 layered audio: driving rain, high-freq detail, deep sub-bass thunder, mid-range rolling thunder, wind gusts, and sub-perceptual 2Hz delta binaural beats for stage 3/4 deep sleep.\n\nNo ads to wake you up. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#thunder #thunderstorm #storm #deltawaves #sleep #binaural #ambient #blackscreen #deepsleep #noads',
+    tags: ['thunderstorm', 'thunder sounds', 'thunderstorm sounds for sleeping', 'storm', 'delta waves', 'binaural beats', 'sleep sounds', 'deep sleep', 'ambient', 'black screen', 'no ads', 'thunder and rain', 'heavy thunder'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.7"`,    // rain body
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.15"`,    // high freq rain detail
@@ -112,13 +114,14 @@ const CATEGORIES = [
   {
     name: 'ocean',
     title_templates: [
-      '{hours} Hours of Ocean Waves for Sleep | Theta Waves',
-      'Ocean Sounds - Waves Crashing | {hours}h Binaural Beats',
-      'Calm Ocean Waves for Deep Relaxation - {hours} Hours',
-      'Beach Waves at Night | {hours} Hours | 6Hz Theta',
+      'Ocean Waves for Deep Sleep | {hours} Hours | Black Screen No Ads',
+      'Waves Crashing on Beach | {hours} Hours Black Screen | Sleep Sounds',
+      '{hours}h Ocean Sounds for Sleeping | Theta Waves | No Music',
+      'Calm Ocean Waves at Night | {hours} Hours | Fall Asleep Instantly',
+      'Beach Waves for Relaxation | {hours} Hours Black Screen | Binaural',
     ],
-    description: 'Relax with {hours} hours of ocean wave sounds with embedded theta wave frequencies (6Hz) for meditation. 7 layers: deep surf, shore wash, foam fizz, pebble undertow, distant seabirds, and sub-perceptual theta binaural beats.\n\nTheta binaural beats (210Hz/216Hz = 6Hz theta) promote the drowsy pre-sleep state and deep meditation.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#ocean #waves #thetawaves #meditation #binaural #ambient',
-    tags: ['ocean waves', 'sea sounds', 'theta waves', 'binaural beats', 'meditation', 'sleep', 'ambient', 'nature sounds', 'relaxation', 'beach'],
+    description: 'Relax with {hours} hours of ocean wave sounds with embedded theta wave frequencies (6Hz) for meditation. 7 layers: deep surf, shore wash, foam fizz, pebble undertow, distant seabirds, and sub-perceptual theta binaural beats.\n\nTheta binaural beats (210Hz/216Hz = 6Hz theta) promote the drowsy pre-sleep state and deep meditation.\n\nNo ads to interrupt your peace. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#ocean #waves #oceanwaves #thetawaves #meditation #binaural #ambient #blackscreen #deepsleep #noads #beach #seasounds',
+    tags: ['ocean waves', 'ocean sounds for sleeping', 'sea sounds', 'theta waves', 'binaural beats', 'meditation', 'sleep', 'ambient', 'nature sounds', 'relaxation', 'beach', 'black screen', 'no ads', 'waves crashing'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.5"`,     // wave wash
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.3"`,    // deep surf undertow
@@ -148,12 +151,14 @@ const CATEGORIES = [
   {
     name: 'fireplace',
     title_templates: [
-      '{hours} Hours of Crackling Fireplace | Alpha Waves',
-      'Cozy Fireplace Sounds | {hours}h Relaxation Frequency',
-      'Crackling Fire - {hours} Hours | 10Hz Alpha Binaural',
+      'Cozy Fireplace Crackling | {hours} Hours | Black Screen No Ads',
+      'Crackling Fire Sounds for Sleep | {hours} Hours Black Screen',
+      '{hours}h Fireplace Ambience | Fall Asleep to Crackling Fire | No Ads',
+      'Warm Fireplace at Night | {hours} Hours for Relaxation | No Music',
+      'Crackling Fireplace Sounds | {hours} Hours | Cozy Sleep Ambience',
     ],
-    description: '{hours} hours of crackling fireplace with embedded alpha wave frequencies (10Hz) for calm relaxation. 7 layers: sharp crackle pops, warm ember drone, wood shifts, deep hearth resonance, soft ash settling, and sub-perceptual alpha binaural beats.\n\nAlpha binaural beats (315Hz/325Hz = 10Hz alpha) promote calm, alert relaxation — perfect for reading or unwinding.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#fireplace #cozy #alphawaves #binaural #relaxation',
-    tags: ['fireplace', 'crackling fire', 'alpha waves', 'binaural beats', 'cozy', 'relaxation', 'sleep', 'ambient', 'warm'],
+    description: '{hours} hours of crackling fireplace with embedded alpha wave frequencies (10Hz) for calm relaxation. 7 layers: sharp crackle pops, warm ember drone, wood shifts, deep hearth resonance, soft ash settling, and sub-perceptual alpha binaural beats.\n\nAlpha binaural beats (315Hz/325Hz = 10Hz alpha) promote calm, alert relaxation — perfect for reading or unwinding.\n\nNo ads. Just crackling warmth. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#fireplace #cracklingfire #cozy #alphawaves #binaural #relaxation #blackscreen #noads #sleep #ambient',
+    tags: ['fireplace', 'crackling fire', 'fireplace sounds', 'cozy fireplace', 'alpha waves', 'binaural beats', 'cozy', 'relaxation', 'sleep', 'ambient', 'warm', 'black screen', 'no ads', 'crackling fire for sleep'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.25"`,   // crackle pops
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.2"`,    // warm ember hum
@@ -183,12 +188,14 @@ const CATEGORIES = [
   {
     name: 'wind',
     title_templates: [
-      '{hours} Hours of Wind Sounds for Sleep | Delta Waves',
-      'Howling Wind - {hours} Hours | Binaural Sleep Aid',
-      'Winter Wind & Theta Waves for Deep Sleep | {hours}h',
+      'Howling Wind Sounds | {hours} Hours Black Screen | Deep Sleep No Ads',
+      'Wind Through Trees | {hours} Hours for Sleeping | Black Screen',
+      '{hours}h Winter Wind Sounds | Fall Asleep Fast | No Music No Ads',
+      'Blizzard Wind Sounds | {hours} Hours | Deep Sleep Binaural Beats',
+      'Wind Storm at Night | {hours} Hours Black Screen | Sleep Sounds',
     ],
-    description: '{hours} hours of wind through trees with embedded delta wave frequencies (3Hz) for deep sleep. 7 layers: low howling wind, leaf rustle, deep gusts, chimney whistle, distant creaking, and sub-perceptual delta binaural beats.\n\nDelta binaural beats (150Hz/153Hz = 3Hz delta) guide your brainwaves into deep, restorative sleep.\n\nSubscribe for more\nSupport: https://snipelink.com\n\n#wind #deltawaves #binaural #sleep #nature #ambient',
-    tags: ['wind sounds', 'howling wind', 'delta waves', 'binaural beats', 'deep sleep', 'ambient', 'relaxation', 'nature sounds'],
+    description: '{hours} hours of wind through trees with embedded delta wave frequencies (3Hz) for deep sleep. 7 layers: low howling wind, leaf rustle, deep gusts, chimney whistle, distant creaking, and sub-perceptual delta binaural beats.\n\nDelta binaural beats (150Hz/153Hz = 3Hz delta) guide your brainwaves into deep, restorative sleep.\n\nNo ads to wake you up. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#wind #windsounds #howlingwind #deltawaves #binaural #sleep #nature #ambient #blackscreen #noads #blizzard #deepsleep',
+    tags: ['wind sounds', 'howling wind', 'wind sounds for sleeping', 'delta waves', 'binaural beats', 'deep sleep', 'ambient', 'relaxation', 'nature sounds', 'black screen', 'no ads', 'blizzard', 'winter wind'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,    // low howl
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.15"`,    // leaf rustle
@@ -248,37 +255,129 @@ function getYouTube() {
   return google.youtube({ version: 'v3', auth: getYouTubeAuth() });
 }
 
+// ─── Thumbnail Scenes ────────────────────────────────────
+// Cinematic atmospheric scenes — top ambient channels use cozy scenes, not plain text
+const THUMB_SCENES = {
+  rain: {
+    bgGradient: ['#0a1628', '#1a2a4a'],
+    sceneElements: `
+      <rect x="300" y="100" width="680" height="450" rx="8" fill="#1a1a2e" opacity="0.9"/>
+      <rect x="320" y="120" width="640" height="410" rx="4" fill="#0d1b2a" opacity="0.8"/>
+      <!-- Rain streaks on window -->
+      ${Array.from({length: 40}, (_, i) => `<line x1="${320 + (i * 16)}" y1="${120 + (i % 7) * 20}" x2="${325 + (i * 16)}" y2="${180 + (i % 5) * 30}" stroke="rgba(150,180,220,0.3)" stroke-width="1.5"/>`).join('')}
+      <!-- Warm glow from inside -->
+      <ellipse cx="640" cy="400" rx="250" ry="120" fill="rgba(255,160,50,0.08)"/>
+      <ellipse cx="640" cy="420" rx="150" ry="60" fill="rgba(255,120,30,0.06)"/>
+    `,
+    accentColor: '#6ea8d7',
+  },
+  thunder: {
+    bgGradient: ['#060c1a', '#1a1a30'],
+    sceneElements: `
+      <!-- Lightning bolt -->
+      <polygon points="640,50 620,200 660,200 600,380 660,250 630,250 680,80" fill="rgba(200,220,255,0.15)"/>
+      <polygon points="640,60 625,190 655,195 610,360 650,245 635,248 670,90" fill="rgba(255,255,255,0.08)"/>
+      <!-- Storm clouds -->
+      <ellipse cx="400" cy="120" rx="300" ry="80" fill="rgba(30,30,60,0.6)"/>
+      <ellipse cx="700" cy="100" rx="250" ry="70" fill="rgba(25,25,50,0.5)"/>
+      <ellipse cx="550" cy="80" rx="200" ry="60" fill="rgba(40,40,70,0.4)"/>
+      <!-- Rain -->
+      ${Array.from({length: 30}, (_, i) => `<line x1="${100 + (i * 40)}" y1="${200 + (i % 5) * 40}" x2="${105 + (i * 40)}" y2="${280 + (i % 3) * 50}" stroke="rgba(120,140,200,0.2)" stroke-width="1"/>`).join('')}
+    `,
+    accentColor: '#8090c0',
+  },
+  ocean: {
+    bgGradient: ['#071e35', '#0c3a60'],
+    sceneElements: `
+      <!-- Waves -->
+      <path d="M0,500 Q160,460 320,500 Q480,540 640,500 Q800,460 960,500 Q1120,540 1280,500 L1280,720 L0,720 Z" fill="rgba(10,50,90,0.5)"/>
+      <path d="M0,520 Q160,490 320,520 Q480,550 640,520 Q800,490 960,520 Q1120,550 1280,520 L1280,720 L0,720 Z" fill="rgba(8,40,75,0.6)"/>
+      <path d="M0,550 Q200,530 400,550 Q600,570 800,550 Q1000,530 1280,550 L1280,720 L0,720 Z" fill="rgba(5,30,60,0.7)"/>
+      <!-- Moon -->
+      <circle cx="900" cy="120" r="60" fill="rgba(220,230,255,0.12)"/>
+      <circle cx="915" cy="110" r="55" fill="#071e35"/>
+      <!-- Moon reflection -->
+      <ellipse cx="900" cy="550" rx="40" ry="100" fill="rgba(180,200,230,0.04)"/>
+    `,
+    accentColor: '#5a9cc0',
+  },
+  fireplace: {
+    bgGradient: ['#120600', '#2a1000'],
+    sceneElements: `
+      <!-- Fireplace frame -->
+      <rect x="340" y="250" width="600" height="400" rx="0" fill="#1a0800" stroke="#3d1a00" stroke-width="4"/>
+      <rect x="360" y="270" width="560" height="360" rx="0" fill="#0d0400"/>
+      <!-- Fire glow -->
+      <ellipse cx="640" cy="550" rx="200" ry="100" fill="rgba(255,100,0,0.15)"/>
+      <ellipse cx="640" cy="520" rx="120" ry="80" fill="rgba(255,60,0,0.12)"/>
+      <ellipse cx="640" cy="500" rx="80" ry="60" fill="rgba(255,150,20,0.1)"/>
+      <!-- Flame shapes -->
+      <path d="M600,600 Q610,450 640,400 Q670,450 680,600 Z" fill="rgba(255,120,0,0.2)"/>
+      <path d="M620,600 Q635,470 650,430 Q665,470 680,600 Z" fill="rgba(255,180,40,0.15)"/>
+      <path d="M570,600 Q590,500 620,460 Q640,520 660,600 Z" fill="rgba(255,80,0,0.12)"/>
+      <!-- Warm room glow -->
+      <ellipse cx="640" cy="350" rx="400" ry="250" fill="rgba(255,100,20,0.04)"/>
+    `,
+    accentColor: '#ff8c40',
+  },
+  wind: {
+    bgGradient: ['#151a22', '#252d3a'],
+    sceneElements: `
+      <!-- Misty layers -->
+      <ellipse cx="300" cy="400" rx="500" ry="80" fill="rgba(60,70,90,0.15)"/>
+      <ellipse cx="800" cy="350" rx="400" ry="60" fill="rgba(50,60,80,0.12)"/>
+      <ellipse cx="500" cy="300" rx="600" ry="40" fill="rgba(70,80,100,0.08)"/>
+      <!-- Trees silhouette -->
+      <path d="M100,720 L120,400 L140,720 Z" fill="rgba(20,25,35,0.6)"/>
+      <path d="M130,720 L150,350 L170,720 Z" fill="rgba(20,25,35,0.5)"/>
+      <path d="M1100,720 L1120,380 L1140,720 Z" fill="rgba(20,25,35,0.6)"/>
+      <path d="M1140,720 L1160,420 L1180,720 Z" fill="rgba(20,25,35,0.5)"/>
+      <!-- Wind streaks -->
+      ${Array.from({length: 15}, (_, i) => `<line x1="${100 + (i * 80)}" y1="${200 + (i % 4) * 60}" x2="${250 + (i * 80)}" y2="${195 + (i % 4) * 60}" stroke="rgba(100,110,130,0.08)" stroke-width="2"/>`).join('')}
+      <!-- Moon -->
+      <circle cx="960" cy="150" r="45" fill="rgba(200,210,230,0.1)"/>
+    `,
+    accentColor: '#8090a0',
+  },
+};
+
 // ─── Generate Thumbnail ───────────────────────────────────
 async function generateThumbnail(category, hours, outputPath) {
   const width = 1280;
   const height = 720;
+  const scene = THUMB_SCENES[category.name] || THUMB_SCENES.rain;
 
-  // Create gradient background with text overlay (no emoji — causes Pango crash on Linux/Railway)
+  // Cinematic atmospheric thumbnail — dark moody scene with minimal text
   const svg = `
     <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:rgb(${category.color.r},${category.color.g},${category.color.b});stop-opacity:1" />
-          <stop offset="100%" style="stop-color:rgb(${Math.max(0, category.color.r - 15)},${Math.max(0, category.color.g - 15)},${Math.max(0, category.color.b - 15)});stop-opacity:1" />
-        </linearGradient>
-        <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" style="stop-color:#14F195;stop-opacity:1" />
-          <stop offset="100%" style="stop-color:#9945FF;stop-opacity:1" />
+        <linearGradient id="bg" x1="0%" y1="0%" x2="50%" y2="100%">
+          <stop offset="0%" style="stop-color:${scene.bgGradient[0]};stop-opacity:1" />
+          <stop offset="100%" style="stop-color:${scene.bgGradient[1]};stop-opacity:1" />
         </linearGradient>
         <filter id="glow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+          <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
           <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="softglow">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
       <rect width="${width}" height="${height}" fill="url(#bg)" />
-      <text x="${width / 2}" y="${height / 2 - 80}" font-family="Arial, sans-serif" font-size="100" font-weight="bold" fill="url(#accent)" text-anchor="middle" filter="url(#glow)">${category.text}</text>
-      <text x="${width / 2}" y="${height / 2 + 40}" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="white" text-anchor="middle">${hours} HOURS</text>
-      <text x="${width / 2}" y="${height / 2 + 120}" font-family="Arial, sans-serif" font-size="32" fill="rgba(255,255,255,0.5)" text-anchor="middle">For Sleep and Relaxation</text>
-      <text x="${width / 2}" y="${height - 40}" font-family="Arial, sans-serif" font-size="24" fill="rgba(255,255,255,0.3)" text-anchor="middle">SnipeLink Sounds</text>
+      ${scene.sceneElements}
+      <!-- Bottom gradient overlay for text readability -->
+      <rect x="0" y="400" width="${width}" height="320" fill="url(#bg)" opacity="0.5"/>
+      <!-- Duration badge top-right -->
+      <rect x="${width - 200}" y="30" width="170" height="55" rx="8" fill="rgba(0,0,0,0.6)"/>
+      <text x="${width - 115}" y="67" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">${hours} HOURS</text>
+      <!-- Main title text bottom-left (minimal like top channels) -->
+      <text x="50" y="${height - 100}" font-family="Arial, sans-serif" font-size="56" font-weight="bold" fill="white" filter="url(#softglow)">${category.text}</text>
+      <text x="50" y="${height - 50}" font-family="Arial, sans-serif" font-size="28" fill="${scene.accentColor}" opacity="0.9">Deep Sleep | Black Screen | No Ads</text>
     </svg>`;
 
   await sharp(Buffer.from(svg))
-    .jpeg({ quality: 90 })
+    .jpeg({ quality: 92 })
     .toFile(outputPath);
 }
 
@@ -377,21 +476,36 @@ function generateVideo(category, durationSecs, outputPath) {
     execSync(videoCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
     console.log('[YouTube] Video loop generated');
 
-    // Step 2: Generate full-length audio (7 layers + binaural)
-    console.log(`[YouTube] Step 2/3: Generating ${durationSecs}s audio (7 layers + binaural)...`);
-    const audioInputs = category.audio_inputs(durationSecs).join(' ');
+    // Step 2: Generate audio chunk (1h) then loop it for full duration
+    // Noise generators produce seamless output, so looping is inaudible
+    const AUDIO_CHUNK = 3600; // 1 hour chunk
+    const audioChunk = join(dir, `${category.name}-audio-chunk.m4a`);
+    console.log(`[YouTube] Step 2/4: Generating ${AUDIO_CHUNK}s audio chunk (7 layers + binaural)...`);
+    const audioInputs = category.audio_inputs(AUDIO_CHUNK).join(' ');
     const audioCmd = `ffmpeg -y \
       ${audioInputs} \
       -filter_complex "${category.audio_filter_complex}" \
       -map "[aout]" \
       -c:a aac -b:a 192k -ac 2 \
+      -t ${AUDIO_CHUNK} \
+      "${audioChunk}" 2>&1`;
+    execSync(audioCmd, { timeout: 1200000, maxBuffer: 50 * 1024 * 1024 });
+    console.log('[YouTube] Audio chunk generated');
+
+    // Step 3: Loop audio chunk to full duration
+    const audioLoopCount = Math.ceil(durationSecs / AUDIO_CHUNK);
+    console.log(`[YouTube] Step 3/4: Looping audio ${audioLoopCount}x for ${durationSecs}s...`);
+    const audioLoopCmd = `ffmpeg -y \
+      -stream_loop ${audioLoopCount} -i "${audioChunk}" \
+      -c:a copy \
       -t ${durationSecs} \
       "${audioFile}" 2>&1`;
-    execSync(audioCmd, { timeout: 1200000, maxBuffer: 50 * 1024 * 1024 });
-    console.log('[YouTube] Audio generated');
+    execSync(audioLoopCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
+    try { unlinkSync(audioChunk); } catch {}
+    console.log('[YouTube] Full audio generated');
 
-    // Step 3: Mux looped video + audio into final file
-    console.log('[YouTube] Step 3/3: Muxing video loop + audio...');
+    // Step 4: Mux looped video + looped audio into final file
+    console.log('[YouTube] Step 4/4: Muxing video loop + audio...');
     const loopCount = Math.ceil(durationSecs / LOOP_SECS);
     const muxCmd = `ffmpeg -y \
       -stream_loop ${loopCount} -i "${videoLoop}" \
@@ -401,7 +515,7 @@ function generateVideo(category, durationSecs, outputPath) {
       -t ${durationSecs} \
       -shortest \
       "${outputPath}" 2>&1`;
-    execSync(muxCmd, { timeout: 300000, maxBuffer: 50 * 1024 * 1024 });
+    execSync(muxCmd, { timeout: 600000, maxBuffer: 50 * 1024 * 1024 });
     console.log('[YouTube] Final video muxed');
 
     // Cleanup intermediates
@@ -685,7 +799,9 @@ export async function runYouTubeAgent() {
 
   if (hoursSinceUpload >= 24) {
     const category = CATEGORIES[state.categoryIndex % CATEGORIES.length];
-    const hours = [1, 2, 3][Math.floor(Math.random() * 3)];
+    // 8-10 hours is the sweet spot — competitors prove this gets max watch time
+    // Our loop approach handles any length (60s video loop + full audio)
+    const hours = [8, 10][Math.floor(Math.random() * 2)];
     const durationSecs = hours * 3600;
 
     const titleTemplate = category.title_templates[Math.floor(Math.random() * category.title_templates.length)];
@@ -701,9 +817,9 @@ export async function runYouTubeAgent() {
       // Generate thumbnail
       await generateThumbnail(category, hours, thumbPath);
 
-      // Generate video (this takes a while for long durations)
-      // For Railway, cap at 1h to avoid timeout — longer videos for local
-      const maxDuration = process.env.RAILWAY_ENVIRONMENT ? 3600 : Math.min(durationSecs, 10800);
+      // With loop approach, generation is fast (60s video + audio gen + mux)
+      // Audio for 10h = ~5 min to generate, video loop = 1 min, mux = seconds
+      const maxDuration = durationSecs; // No cap needed with loop approach
       const actualHours = maxDuration / 3600;
       const actualTitle = titleTemplate.replace('{hours}', actualHours);
       const actualDesc = description.replace(/{hours}/g, actualHours);

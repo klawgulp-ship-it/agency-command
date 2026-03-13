@@ -58,58 +58,51 @@ const CTA_PHRASES = [
 // Rotating formats that exploit engagement triggers
 const GIVEAWAY_FORMATS = [
   {
-    name: 'classic_drop',
+    name: 'classic_viral',
     template: () => {
       const amount = randomAmount();
-      const cta = pick(CTA_PHRASES);
-      const urgency = pick(URGENCY_PHRASES);
-      return `$SLK GIVEAWAY\n\nSending ${amount} $SLK to everyone who:\n\n1. Follow @snipelink\n2. RT this tweet\n3. ${cta}\n\n${urgency}\n\nsnipelink.com`;
+      return `$SLK GIVEAWAY\n\nGiving away ${amount} $SLK to 3 winners\n\nTo enter:\n1. Follow @snipelink\n2. Like + RT\n3. Tag 2 friends who need free crypto\n4. Drop your SOL address\n\nWinners picked in 24h\n\nsnipelink.com`;
     },
   },
   {
-    name: 'airdrop_hype',
+    name: 'dev_community',
     template: () => {
       const amount = randomAmount();
-      return `FREE $SLK AIRDROP\n\n${amount} $SLK dropping to random wallets\n\nHow to claim:\n- Follow + RT\n- Drop your SOL address\n- Tag 2 friends\n\nFirst 500 entries only\n\nsnipelink.com`;
+      return `Devs deserve free tools AND free tokens\n\n${amount} $SLK giveaway\n\nHow to enter:\n1. Follow @snipelink\n2. RT this post\n3. Tag a dev friend\n4. Reply with your SOL address\n\n3 winners in 24h. Building the dev payment layer on Solana\n\nsnipelink.com`;
     },
   },
   {
-    name: 'mystery_amount',
-    template: () => {
-      return `I'm sending $SLK to EVERY person who replies\n\nNo catch. No strings.\n\nJust drop your SOL address and RT\n\nWhy? Because $SLK is about to go crazy and I want you in early\n\nsnipelink.com`;
-    },
-  },
-  {
-    name: 'engagement_bait',
+    name: 'engagement_quiz',
     template: () => {
       const amount = randomAmount();
-      return `MASSIVE $SLK GIVEAWAY\n\nGiving away ${amount} $SLK RIGHT NOW\n\nRules:\n1. Like + RT (I'm checking)\n2. Follow @snipelink\n3. Reply with SOL address\n\nPicking winners in 24h\n\nsnipelink.com`;
+      const questions = [
+        'What do you use to accept payments for your projects?',
+        'What Solana tool would you build if you had unlimited time?',
+        'What is the biggest problem with crypto payments right now?',
+      ];
+      const q = pick(questions);
+      return `$SLK GIVEAWAY + a question\n\n${q}\n\nBest answer wins ${amount} $SLK\n\nRules:\n- Follow @snipelink\n- RT\n- Reply with your answer + SOL address\n- Tag 2 friends\n\n3 winners in 24h\n\nsnipelink.com`;
     },
   },
   {
-    name: 'fomo_trigger',
+    name: 'milestone_celebration',
     template: () => {
       const amount = randomAmount();
-      return `Last time I did this, people made 10x\n\nSending ${amount} $SLK FREE\n\nAll you have to do:\n- RT this\n- Drop SOL address\n- Follow\n\nNot gonna last. $SLK is just getting started\n\nsnipelink.com`;
+      return `Celebrating our growing community with a ${amount} $SLK giveaway\n\nTo enter:\n1. Follow @snipelink\n2. Like + RT\n3. Tag 2 friends\n4. Drop SOL address\n\nPicking 3 winners in 24h\n\nFree crypto payments for devs: snipelink.com`;
     },
   },
   {
-    name: 'question_hook',
-    template: () => {
-      return `Want free crypto?\n\nI'm airdropping $SLK to my followers\n\nJust:\n1. Follow @snipelink\n2. RT\n3. Drop your SOL address below\n\nThat's literally it. Free $SLK sent to your wallet\n\nsnipelink.com`;
-    },
-  },
-  {
-    name: 'thread_giveaway',
+    name: 'simple_drop',
     template: () => {
       const amount = randomAmount();
-      return `$SLK is the next 100x Solana token\n\nAnd I'm giving away ${amount} $SLK to prove it\n\nDrop your SOL address + RT\n\nI'll send tokens within 24h. No cap.\n\nsnipelink.com`;
+      return `FREE $SLK\n\nSending ${amount} $SLK to 3 random followers\n\nAll you need to do:\n- Follow + RT\n- Tag a friend\n- Drop your SOL address\n\nWinners in 24h. No catch.\n\nsnipelink.com`;
     },
   },
   {
-    name: 'community_build',
+    name: 'builder_giveaway',
     template: () => {
-      return `Building the $SLK community one wallet at a time\n\nFREE tokens for anyone who:\n\n- Follows @snipelink\n- RTs this\n- Drops their SOL address\n\nWe're early. This is how you get in before everyone else\n\nsnipelink.com`;
+      const amount = randomAmount();
+      return `Builders get rewarded\n\n${amount} $SLK giveaway for the Solana community\n\n1. Follow @snipelink\n2. RT + Like\n3. Tag 2 devs or builders\n4. Reply with SOL address\n\n3 winners announced in 24h\n\nBuilding crypto payment infra at snipelink.com`;
     },
   },
 ];

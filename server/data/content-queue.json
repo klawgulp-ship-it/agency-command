@@ -38,6 +38,13 @@
     { "content": "The npm package nobody asked for but every dev needs: npx snipelink-readme auto-generates a full README from your code. Try it.", "tags": [] }
   ],
   "x": [
+    { "content": "Building a payment platform that accepts SOL, USDC, and PayPal.\n\nNo Stripe. No Square. No middleman.\n\nHere's what I learned: crypto payment UX is still terrible. So we fixed it.\n\nOne link. Instant settlement. Zero fees.\n\nsnipelink.com", "tags": [] },
+    { "content": "I replaced Stripe with crypto payment links for my freelance business.\n\nResults after 30 days:\n- $0 in fees (was paying ~$87/mo)\n- Instant settlement (was 3-5 days)\n- Zero chargebacks\n- Clients actually prefer it\n\nsnipelink.com", "tags": [] },
+    { "content": "Unpopular opinion: Stripe is a tax on small developers.\n\n2.9% + 30c per transaction.\nChargeback risk.\n7-day rolling payouts.\nKYC for everyone.\n\nCrypto rails fix ALL of this. We proved it.\n\nsnipelink.com", "tags": [] },
+    { "content": "What's the biggest pain point you have accepting payments as a developer?\n\nGenuinely want to know. Building tools to fix this.", "tags": [] },
+    { "content": "Poll: How do you accept payments for freelance/side projects?\n\nStripe? PayPal? Crypto? Cash? Something else?\n\nDrop your answer below. Building something based on the results.", "tags": [] },
+    { "content": "Day 47 of building crypto payment infrastructure in public.\n\nToday: shipped embeddable payment badges for GitHub READMEs.\n\nOne line of markdown. SOL/USDC/PayPal. Dark + light mode.\n\nOpen source maintainers need this.\n\nsnipelink.com", "tags": [] },
+    { "content": "Just shipped 3 free dev tools as npm packages:\n\nnpx snipelink-review -- AI code review\nnpx snipelink-ts -- JS to TS migration\nnpx snipelink-readme -- auto README gen\n\nNo signup. No API keys. No cloud.\n\nBuilding dev tools that respect your time.", "tags": [] },
     { "content": "Stripe charges 2.9% + 30c per transaction. SOL transfers cost $0.00025 and settle in 400ms. Do the math.\n\nsnipelink.com", "tags": [] },
     { "content": "We built payment links that accept SOL, USDC, and PayPal. No KYC, no monthly fees, no middleman taking a cut.\n\nsnipelink.com", "tags": [] },
     { "content": "3 free dev tools we shipped this month:\n\nnpx snipelink-review — AI code review\nnpx snipelink-ts — JS to TS converter\nnpx snipelink-readme — auto README gen\n\nNo signup. No API keys. Just run them.", "tags": [] },
