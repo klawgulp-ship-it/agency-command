@@ -31,7 +31,7 @@ import { runMarketingAgent } from './services/marketingAgent.js';
 import { runSocialAgent, runXReplyGuy, runXHypeMan } from './services/socialAgent.js';
 import { runDataAgent, reportHealth, isAgentEnabled, getAgentStatus, getDailyReportData } from './services/dataAgent.js';
 import { runGiveawayAgent, getPendingWinners, markGiveawaySent } from './services/giveawayAgent.js';
-import { runYouTubeAgent, getYouTubeOAuthUrl, exchangeYouTubeCode } from './services/youtubeAgent.js';
+import { runYouTubeAgent, getYouTubeOAuthUrl, exchangeYouTubeCode, deleteAllVideos, forceUploadNow } from './services/youtubeAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
 import { setupToolRoutes } from './services/microSaasEngine.js';
 
@@ -111,6 +111,31 @@ app.post('/api/youtube/run', async (req, res) => {
   try {
     console.log('[API] Manual YouTube agent trigger');
     const result = await runYouTubeAgent();
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// Delete all old videos and upload fresh one with new visuals
+app.post('/api/youtube/purge-and-upload', async (req, res) => {
+  try {
+    console.log('[API] Purging old videos and uploading fresh...');
+    const purge = await deleteAllVideos();
+    console.log('[API] Purge done, triggering fresh upload...');
+    const upload = await forceUploadNow();
+    res.json({ purge, upload });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/youtube/delete-all', async (req, res) => {
+  try {
+    const result = await deleteAllVideos();
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/youtube/force-upload', async (req, res) => {
+  try {
+    const result = await forceUploadNow();
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });

@@ -714,6 +714,52 @@ async function uploadVideo(videoPath, thumbnailPath, title, description, tags) {
   return videoId;
 }
 
+// ─── Delete Video ────────────────────────────────────────
+export async function deleteVideo(videoId) {
+  const yt = getYouTube();
+  await yt.videos.delete({ id: videoId });
+  db.prepare(`UPDATE youtube_videos SET status = 'deleted' WHERE video_id = ?`).run(videoId);
+  console.log(`[YouTube] Deleted video: ${videoId}`);
+  return true;
+}
+
+export async function deleteAllVideos() {
+  const yt = getYouTube();
+  const videos = db.prepare(`SELECT video_id, title FROM youtube_videos WHERE status = 'published' AND video_id IS NOT NULL`).all();
+  const results = { deleted: 0, failed: 0, errors: [] };
+
+  for (const v of videos) {
+    try {
+      await yt.videos.delete({ id: v.video_id });
+      db.prepare(`UPDATE youtube_videos SET status = 'deleted' WHERE video_id = ?`).run(v.video_id);
+      results.deleted++;
+      console.log(`[YouTube] Deleted: ${v.video_id} — "${v.title}"`);
+    } catch (e) {
+      results.failed++;
+      results.errors.push(`${v.video_id}: ${e.message?.slice(0, 80)}`);
+      console.log(`[YouTube] Delete failed for ${v.video_id}: ${e.message?.slice(0, 80)}`);
+    }
+  }
+
+  // Reset cooldown so a new video can upload immediately
+  const state = getState();
+  state.lastUpload = null;
+  saveState(state);
+
+  console.log(`[YouTube] Purge complete: ${results.deleted} deleted, ${results.failed} failed`);
+  return results;
+}
+
+// ─── Force Upload Now (bypass 24h cooldown) ──────────────
+export async function forceUploadNow() {
+  // Reset the cooldown timer
+  const state = getState();
+  state.lastUpload = null;
+  saveState(state);
+  console.log('[YouTube] Cooldown reset — forcing immediate upload');
+  return runYouTubeAgent();
+}
+
 // ─── Comment on Related Videos ────────────────────────────
 async function commentOnRelatedVideos(category) {
   const yt = getYouTube();
