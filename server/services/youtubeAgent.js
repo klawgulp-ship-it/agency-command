@@ -845,6 +845,75 @@ export async function runYouTubeAgent() {
       result.uploaded = 1;
       trackSpend('youtube-ffmpeg', 0); // Free generation
       console.log(`[YouTube] Published: "${actualTitle}" (${videoId})`);
+
+      // ─── Spotify/Streaming Export ──────────────────────
+      // Generate distribution-ready audio tracks for DistroKid upload
+      // Split into album tracks (7-10 min each) as WAV 44.1kHz 16-bit
+      try {
+        const distDir = join(TEMP_DIR, '../spotify-export', `${category.name}-${actualHours}h`);
+        if (!existsSync(distDir)) mkdirSync(distDir, { recursive: true });
+
+        const trackDuration = 600; // 10 min per track
+        const numTracks = Math.min(Math.ceil(actualHours * 3600 / trackDuration), 10);
+        const audioSrc = join(TEMP_DIR, `${category.name}-audio.m4a`);
+
+        // Check if audio file still exists (may have been cleaned by generateVideo)
+        // If not, regenerate a 1h audio chunk for splitting
+        let srcAudio = audioSrc;
+        if (!existsSync(srcAudio)) {
+          console.log('[YouTube] Regenerating audio for Spotify export...');
+          const audioInputs = category.audio_inputs(3600).join(' ');
+          const regenCmd = `ffmpeg -y ${audioInputs} -filter_complex "${category.audio_filter_complex}" -map "[aout]" -c:a pcm_s16le -ar 44100 -ac 2 -t 3600 "${join(distDir, 'source.wav')}" 2>&1`;
+          execSync(regenCmd, { timeout: 1200000, maxBuffer: 50 * 1024 * 1024 });
+          srcAudio = join(distDir, 'source.wav');
+        }
+
+        // Split into tracks
+        for (let i = 0; i < numTracks; i++) {
+          const startSec = (i * trackDuration) % 3600; // Loop within 1h source
+          const trackNum = String(i + 1).padStart(2, '0');
+          const trackName = `${trackNum} - ${category.text} Part ${i + 1}`;
+          const trackPath = join(distDir, `${trackName}.wav`);
+
+          const splitCmd = `ffmpeg -y -i "${srcAudio}" -ss ${startSec} -t ${trackDuration} -c:a pcm_s16le -ar 44100 -ac 2 "${trackPath}" 2>&1`;
+          execSync(splitCmd, { timeout: 120000, maxBuffer: 10 * 1024 * 1024 });
+        }
+
+        // Generate 3000x3000 album art
+        const artPath = join(distDir, 'cover.jpg');
+        const scene = THUMB_SCENES[category.name] || THUMB_SCENES.rain;
+        const artSvg = `<svg width="3000" height="3000" xmlns="http://www.w3.org/2000/svg">
+          <defs><linearGradient id="bg" x1="0%" y1="0%" x2="50%" y2="100%">
+            <stop offset="0%" style="stop-color:${scene.bgGradient[0]}"/><stop offset="100%" style="stop-color:${scene.bgGradient[1]}"/>
+          </linearGradient></defs>
+          <rect width="3000" height="3000" fill="url(#bg)"/>
+          <text x="1500" y="1300" font-family="Arial,sans-serif" font-size="280" font-weight="bold" fill="white" text-anchor="middle">${category.text}</text>
+          <text x="1500" y="1600" font-family="Arial,sans-serif" font-size="160" fill="${scene.accentColor}" text-anchor="middle">Deep Sleep | Binaural Beats</text>
+          <text x="1500" y="1900" font-family="Arial,sans-serif" font-size="120" fill="rgba(255,255,255,0.4)" text-anchor="middle">SnipeLink Sounds</text>
+        </svg>`;
+        await sharp(Buffer.from(artSvg)).resize(3000, 3000).jpeg({ quality: 95 }).toFile(artPath);
+
+        // Write metadata file for DistroKid upload
+        const metaPath = join(distDir, 'metadata.json');
+        const meta = {
+          artist: 'SnipeLink Sounds',
+          album: `${category.text} for Deep Sleep`,
+          year: new Date().getFullYear(),
+          genre: 'Ambient',
+          tracks: numTracks,
+          trackDuration: `${trackDuration / 60} min each`,
+          description: `${actualHours} hours of ${category.name} ambient sounds with embedded binaural beats.`,
+          distrokid_notes: 'Upload WAV files + cover.jpg to DistroKid. Artist: SnipeLink Sounds. Genre: Ambient.',
+        };
+        writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+
+        // Clean source file
+        try { if (existsSync(join(distDir, 'source.wav'))) unlinkSync(join(distDir, 'source.wav')); } catch {}
+
+        console.log(`[YouTube] Spotify export: ${numTracks} tracks in ${distDir}`);
+      } catch (e) {
+        console.log('[YouTube] Spotify export failed (non-critical):', e.message?.slice(0, 100));
+      }
     } catch (e) {
       result.errors.push(`Upload failed: ${e.message?.slice(0, 150)}`);
       console.error('[YouTube] Upload error:', e.message?.slice(0, 200));
