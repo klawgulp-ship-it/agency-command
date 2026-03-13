@@ -29,6 +29,7 @@ import { runAutoBidder } from './services/freelanceBidder.js';
 import { runSecurityScanner } from './services/securityScanner.js';
 import { runMarketingAgent } from './services/marketingAgent.js';
 import { runSocialAgent, runXReplyGuy, runXHypeMan } from './services/socialAgent.js';
+import { runDataAgent, reportHealth, isAgentEnabled, getAgentStatus, getDailyReportData } from './services/dataAgent.js';
 import { runGiveawayAgent, getPendingWinners, markGiveawaySent } from './services/giveawayAgent.js';
 import { runYouTubeAgent, getYouTubeOAuthUrl, exchangeYouTubeCode } from './services/youtubeAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
@@ -129,6 +130,22 @@ app.post('/api/x/hype-man', async (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Data Agent Dashboard Endpoints ─────────────────────
+app.get('/api/agents/status', (req, res) => {
+  res.json(getAgentStatus());
+});
+
+app.get('/api/agents/report', (req, res) => {
+  res.json(getDailyReportData());
+});
+
+app.post('/api/agents/check', async (req, res) => {
+  try {
+    const result = await runDataAgent();
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ─── Giveaway Winners (manual send) ─────────────────────
 app.get('/api/giveaway/winners', (req, res) => {
   const pending = getPendingWinners();
@@ -192,11 +209,17 @@ if (existsSync(distPath)) {
 //  :55 — Security scanner every 6h
 
 cron.schedule('5,35 * * * *', async () => {
+  if (!isAgentEnabled('bounty-solver')) return;
   console.log('[CRON] Running bounty solver (verified repos only)...');
+  const t = Date.now();
   try {
     const result = await runAutoSolver();
+    reportHealth('bounty-solver', 'ok', result.solved, '', Date.now() - t);
     console.log(`[CRON] Solver done: ${result.solved}/${result.total} solved`);
-  } catch (e) { console.error('[CRON] Solver failed:', e.message); }
+  } catch (e) {
+    reportHealth('bounty-solver', 'error', 0, e.message, Date.now() - t);
+    console.error('[CRON] Solver failed:', e.message);
+  }
 });
 
 cron.schedule('10,45 * * * *', async () => {
@@ -237,14 +260,20 @@ cron.schedule('40 */4 * * *', async () => {
 });
 
 cron.schedule('50 * * * *', async () => {
+  if (!isAgentEnabled('marketing')) { console.log('[CRON] Marketing DISABLED by data agent'); return; }
   console.log('[CRON] Running marketing agent...');
+  const t = Date.now();
   try {
     const result = await runMarketingAgent();
     const actions = (result.issues?.length || 0) + (result.discussions?.length || 0) +
       (result.stars?.starred || 0) + (result.trending?.actions || 0) +
       (result.devto?.published || 0) + (result.reddit?.actions || 0);
+    reportHealth('marketing', actions > 0 ? 'ok' : 'empty', actions, '', Date.now() - t);
     console.log(`[CRON] Marketing: ${actions} actions`);
-  } catch (e) { console.error('[CRON] Marketing failed:', e.message); }
+  } catch (e) {
+    reportHealth('marketing', 'error', 0, e.message, Date.now() - t);
+    console.error('[CRON] Marketing failed:', e.message);
+  }
 });
 
 cron.schedule('55 */6 * * *', async () => {
@@ -258,12 +287,19 @@ cron.schedule('55 */6 * * *', async () => {
 // ─── Cron: Social agent every 90 min (posts across all platforms) ──
 cron.schedule('15,45 */1 * * *', async () => {
   console.log('[CRON] Running social agent...');
+  const t = Date.now();
   try {
     const result = await runSocialAgent();
     const total = (result.reddit?.comments || 0) + (result.discord?.posts || 0) +
-      (result.telegram?.messages || 0) + (result.bluesky?.posts || 0);
+      (result.telegram?.messages || 0) + (result.bluesky?.posts || 0) +
+      (result.x?.tweets || 0);
+    reportHealth('x-poster', result.x?.tweets > 0 ? 'ok' : 'empty', result.x?.tweets || 0, JSON.stringify(result.x?.errors || []), Date.now() - t);
+    reportHealth('x-engager', (result.xEngage?.likes || 0) > 0 ? 'ok' : 'empty', (result.xEngage?.likes || 0), '', Date.now() - t);
     if (total > 0) console.log(`[CRON] Social: ${total} posts across platforms`);
-  } catch (e) { console.error('[CRON] Social agent failed:', e.message); }
+  } catch (e) {
+    reportHealth('x-poster', 'error', 0, e.message, Date.now() - t);
+    console.error('[CRON] Social agent failed:', e.message);
+  }
 });
 
 // ═══ X AGENT ARMY — 4 independent background agents on staggered schedules ═══
@@ -271,41 +307,77 @@ cron.schedule('15,45 */1 * * *', async () => {
 
 // X Reply Guy — every 20 min — finds convos, drops ⚡ and fire replies
 cron.schedule('*/20 * * * *', async () => {
+  if (!isAgentEnabled('x-reply-guy')) return;
   console.log('[CRON] X Reply Guy hunting conversations...');
+  const t = Date.now();
   try {
     const result = await runXReplyGuy();
     const total = (result.replies || 0) + (result.hypeReplies || 0);
+    reportHealth('x-reply-guy', total > 0 ? 'ok' : 'empty', total, JSON.stringify(result.errors || []), Date.now() - t);
     if (total > 0) console.log(`[CRON] X Reply Guy: ${result.replies} thoughtful + ${result.hypeReplies} hype replies`);
-  } catch (e) { console.error('[CRON] X Reply Guy failed:', e.message); }
+  } catch (e) {
+    reportHealth('x-reply-guy', 'error', 0, e.message, Date.now() - t);
+    console.error('[CRON] X Reply Guy failed:', e.message);
+  }
 });
 
 // X Hype Man — every 30 min — boosts own threads, replies to mentions with energy
 cron.schedule('8,38 * * * *', async () => {
+  if (!isAgentEnabled('x-hype-man')) return;
   console.log('[CRON] X Hype Man boosting threads...');
+  const t = Date.now();
   try {
     const result = await runXHypeMan();
     const total = (result.selfReplies || 0) + (result.mentionReplies || 0);
+    reportHealth('x-hype-man', total > 0 ? 'ok' : 'empty', total, JSON.stringify(result.errors || []), Date.now() - t);
     if (total > 0) console.log(`[CRON] X Hype Man: ${result.selfReplies} thread boosts + ${result.mentionReplies} mention replies`);
-  } catch (e) { console.error('[CRON] X Hype Man failed:', e.message); }
+  } catch (e) {
+    reportHealth('x-hype-man', 'error', 0, e.message, Date.now() - t);
+    console.error('[CRON] X Hype Man failed:', e.message);
+  }
+});
+
+// ═══ DATA AGENT — The Brain — monitors, adjusts, optimizes ═══
+// Runs every 15 min — checks API health, disables broken agents, analyzes performance
+cron.schedule('*/15 * * * *', async () => {
+  try {
+    const result = await runDataAgent();
+    if (result.decisions?.length > 0) {
+      console.log(`[CRON] Data Agent: ${result.decisions.length} decisions made`);
+    }
+  } catch (e) { console.error('[CRON] Data Agent failed:', e.message); }
 });
 
 // ─── Cron: YouTube agent every 2 hours ──────────────────
 cron.schedule('0 */2 * * *', async () => {
+  if (!isAgentEnabled('youtube')) { console.log('[CRON] YouTube DISABLED by data agent'); return; }
   console.log('[CRON] Running YouTube agent...');
+  const t = Date.now();
   try {
     const result = await runYouTubeAgent();
     const actions = result.uploaded + result.comments + result.replies;
+    reportHealth('youtube', actions > 0 ? 'ok' : 'empty', actions, JSON.stringify(result.errors || []), Date.now() - t);
     if (actions > 0) console.log(`[CRON] YouTube: ${result.uploaded} uploaded, ${result.comments} comments, ${result.replies} replies`);
-  } catch (e) { console.error('[CRON] YouTube agent failed:', e.message); }
+  } catch (e) {
+    reportHealth('youtube', 'error', 0, e.message, Date.now() - t);
+    console.error('[CRON] YouTube agent failed:', e.message);
+  }
 });
 
 // ─── Cron: Giveaway agent every 3 hours ─────────────────
 cron.schedule('30 */3 * * *', async () => {
+  if (!isAgentEnabled('giveaway')) return;
   console.log('[CRON] Running giveaway agent...');
+  const t = Date.now();
   try {
     const result = await runGiveawayAgent();
+    const actions = (result.entries || 0) + (result.engaged || 0);
+    reportHealth('giveaway', actions > 0 ? 'ok' : 'empty', actions, '', Date.now() - t);
     console.log(`[CRON] Giveaway: ${result.giveaway?.status || 'none'}, ${result.entries} entries, ${result.engaged} engagements`);
-  } catch (e) { console.error('[CRON] Giveaway agent failed:', e.message); }
+  } catch (e) {
+    reportHealth('giveaway', 'error', 0, e.message, Date.now() - t);
+    console.error('[CRON] Giveaway agent failed:', e.message);
+  }
 });
 
 // ─── Cron: Check overdue invoices daily at 9am ──────────

@@ -937,11 +937,13 @@ export async function runMarketingAgent() {
     `Solana: ${summary.solana?.actions || 0}`,
   ];
 
-  await notify(
-    'marketing',
-    `Marketing cycle: ${totalActions} actions across all platforms`,
-    logParts.join('\n')
-  ).catch(() => {});
+  try {
+    notify(
+      'marketing',
+      `Marketing cycle: ${totalActions} actions across all platforms`,
+      logParts.join('\n')
+    );
+  } catch (e) { /* non-critical */ }
 
   console.log(`[marketing] Cycle complete: ${totalActions} total actions`);
   logParts.forEach(l => console.log(`  ${l}`));

@@ -771,6 +771,7 @@ export async function runXReplyGuy() {
       try {
         const searchData = await searchTweets(query, 10);
         let tweets = searchData.data || [];
+        console.log(`[X-REPLY-GUY] Search "${query.slice(0, 30)}..." returned ${tweets.length} tweets${searchData.errors ? ' (errors: ' + JSON.stringify(searchData.errors).slice(0, 100) + ')' : ''}`);
         tweets = tweets.filter(t => !BLOCK_REGEX.test(t.text));
 
         // Sort by engagement — reply to tweets people are actually reading
@@ -784,8 +785,8 @@ export async function runXReplyGuy() {
 
           const likes = tw.public_metrics?.like_count || 0;
 
-          // High-engagement tweets (10+ likes) get a thoughtful reply with snipelink mention
-          if (likes >= 10) {
+          // Higher engagement tweets (3+ likes) — try Claude for thoughtful reply, fall back to hype
+          if (likes >= 3) {
             try {
               const replyText = await askClaude(`Someone tweeted: "${tw.text.slice(0, 200)}"
 
@@ -810,22 +811,25 @@ IMPORTANT: Return ONLY the reply text. No quotes, no labels.`);
                   console.log(`[X-REPLY-GUY] Replied to ${tw.id} (${likes} likes): ${replyText.slice(0, 60)}...`);
                 }
                 await sleep(2000);
+                continue;
               }
-            } catch (e) {}
+            } catch (e) {
+              // Claude failed (likely credits out) — fall through to hype reply
+              console.log(`[X-REPLY-GUY] Claude failed, using hype reply instead`);
+            }
           }
-          // Lower engagement tweets get a quick hype reply — fast, cheap, high volume
-          else if (likes >= 2) {
-            try {
-              const hype = HYPE_REPLIES[Math.floor(Math.random() * HYPE_REPLIES.length)];
-              const data = await postTweet(hype, tw.id);
-              if (data.data?.id) {
-                results.hypeReplies++;
-                trackPost('x', 'hype-reply', `reply:${tw.id}`, hype);
-                console.log(`[X-REPLY-GUY] Hype replied to ${tw.id}: ${hype}`);
-              }
-              await sleep(1500);
-            } catch (e) {}
-          }
+
+          // Any tweet we find — drop a quick hype reply (no Claude needed, zero cost)
+          try {
+            const hype = HYPE_REPLIES[Math.floor(Math.random() * HYPE_REPLIES.length)];
+            const data = await postTweet(hype, tw.id);
+            if (data.data?.id) {
+              results.hypeReplies++;
+              trackPost('x', 'hype-reply', `reply:${tw.id}`, hype);
+              console.log(`[X-REPLY-GUY] Hype replied to ${tw.id}: ${hype}`);
+            }
+            await sleep(1500);
+          } catch (e) { console.log(`[X-REPLY-GUY] Hype reply failed: ${e.message?.slice(0, 80)}`); }
         }
 
         await sleep(2000); // Pace between searches
