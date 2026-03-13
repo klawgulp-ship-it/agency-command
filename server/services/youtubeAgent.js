@@ -38,15 +38,15 @@ const CATEGORIES = [
   {
     name: 'rain',
     title_templates: [
-      'Heavy Rain for Deep Sleep | {hours} Hours Black Screen | No Ads',
-      'Rain Sounds for Sleeping - {hours} Hours | Black Screen | Delta Waves',
-      '{hours}h Heavy Rainfall | Sleep Instantly | No Music No Ads',
-      'Rain on Window at Night | {hours} Hours for Deep Sleep | Black Screen',
-      'Rain on Tin Roof | {hours} Hours | Deep Sleep Binaural Beats',
-      'Intense Rain Sounds | {hours} Hours Black Screen | Fall Asleep Fast',
+      'Heavy Rain on Window at Night | {hours} Hours for Deep Sleep | No Ads',
+      'Rain Sounds for Sleeping | {hours} Hours Cozy Ambience | Delta Waves',
+      '{hours}h Rain on Glass | Fall Asleep Instantly | Binaural Beats',
+      'Cozy Rain on Window | {hours} Hours | Deep Sleep No Ads',
+      'Rain on Tin Roof at Night | {hours} Hours | Sleep Sounds',
+      'Gentle Rain Ambience | {hours} Hours for Relaxation | No Music',
     ],
-    description: 'Fall asleep fast with {hours} hours of heavy rain sounds with embedded delta wave frequencies (2Hz) for deep sleep induction. 7 audio layers: heavy downpour, mid-range patter, roof drips, distant rumble, close splashes, and sub-perceptual binaural beats.\n\nContains subtle binaural beats (left: 200Hz, right: 202Hz = 2Hz delta) beneath the rain — your brain naturally syncs to deep sleep frequency.\n\nNo ads interrupting your sleep. Subscribe for daily ambient sounds.\n\nTimestamps:\n0:00 Rain begins\n0:30 Full intensity\n{hours}:00:00 End\n\nSupport: https://snipelink.com\n\n#rain #rainsounds #sleep #deltawaves #binaural #ambient #whitenoise #blackscreen #deepsleep #rainforsleeping #nosleepmusic #noads',
-    tags: ['rain sounds', 'rain sounds for sleeping', 'sleep', 'deep sleep', 'delta waves', 'binaural beats', 'ambient', 'heavy rain', 'nature sounds', 'ASMR', 'black screen', 'no ads', 'rain on window', 'rain on roof', '10 hours rain', 'sleep instantly'],
+    description: 'Fall asleep fast with {hours} hours of heavy rain sounds with embedded delta wave frequencies (2Hz) for deep sleep induction. 7 audio layers: heavy downpour, mid-range patter, roof drips, distant rumble, close splashes, and sub-perceptual binaural beats.\n\nContains subtle binaural beats (left: 200Hz, right: 202Hz = 2Hz delta) beneath the rain — your brain naturally syncs to deep sleep frequency.\n\nNo ads interrupting your sleep. Subscribe for daily ambient sounds.\n\nTimestamps:\n0:00 Rain begins\n0:30 Full intensity\n{hours}:00:00 End\n\nSupport: https://snipelink.com\n\n#rain #rainsounds #sleep #deltawaves #binaural #ambient #whitenoise #ambience #cozy #deepsleep #rainforsleeping #nosleepmusic #noads',
+    tags: ['rain sounds', 'rain sounds for sleeping', 'sleep', 'deep sleep', 'delta waves', 'binaural beats', 'ambient', 'heavy rain', 'nature sounds', 'ASMR', 'cozy ambience','no ads', 'rain on window', 'rain on roof', '10 hours rain', 'sleep instantly'],
     // 7 inputs: rain body, patter, drips, rumble, close splashes, binaural L+R
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.6"`,    // heavy rain body
@@ -77,14 +77,14 @@ const CATEGORIES = [
   {
     name: 'thunder',
     title_templates: [
-      'Thunderstorm Sounds for Sleeping | {hours} Hours | Black Screen No Ads',
-      'Heavy Thunder and Rain | {hours} Hours Black Screen | Deep Sleep',
-      '{hours}h Intense Thunderstorm | Fall Asleep in Minutes | No Ads',
-      'Rolling Thunder with Rain | {hours} Hours for Deep Sleep | Binaural',
-      'Thunderstorm at Night | {hours} Hours Black Screen | Sleep Sounds',
+      'Thunderstorm Sounds for Sleeping | {hours} Hours | No Ads',
+      'Heavy Thunder and Rain at Night | {hours} Hours | Deep Sleep',
+      '{hours}h Intense Thunderstorm | Fall Asleep in Minutes | Binaural',
+      'Rolling Thunder with Rain | {hours} Hours Cozy Storm Ambience',
+      'Thunderstorm at Night | {hours} Hours for Deep Sleep | No Music',
     ],
-    description: '{hours} hours of powerful thunderstorm with 7 layered audio: driving rain, high-freq detail, deep sub-bass thunder, mid-range rolling thunder, wind gusts, and sub-perceptual 2Hz delta binaural beats for stage 3/4 deep sleep.\n\nNo ads to wake you up. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#thunder #thunderstorm #storm #deltawaves #sleep #binaural #ambient #blackscreen #deepsleep #noads',
-    tags: ['thunderstorm', 'thunder sounds', 'thunderstorm sounds for sleeping', 'storm', 'delta waves', 'binaural beats', 'sleep sounds', 'deep sleep', 'ambient', 'black screen', 'no ads', 'thunder and rain', 'heavy thunder'],
+    description: '{hours} hours of powerful thunderstorm with 7 layered audio: driving rain, high-freq detail, deep sub-bass thunder, mid-range rolling thunder, wind gusts, and sub-perceptual 2Hz delta binaural beats for stage 3/4 deep sleep.\n\nNo ads to wake you up. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#thunder #thunderstorm #storm #deltawaves #sleep #binaural #ambient #ambience #cozy #deepsleep #noads',
+    tags: ['thunderstorm', 'thunder sounds', 'thunderstorm sounds for sleeping', 'storm', 'delta waves', 'binaural beats', 'sleep sounds', 'deep sleep', 'ambient', 'cozy ambience','no ads', 'thunder and rain', 'heavy thunder'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.7"`,    // rain body
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.15"`,    // high freq rain detail
@@ -114,14 +114,14 @@ const CATEGORIES = [
   {
     name: 'ocean',
     title_templates: [
-      'Ocean Waves for Deep Sleep | {hours} Hours | Black Screen No Ads',
-      'Waves Crashing on Beach | {hours} Hours Black Screen | Sleep Sounds',
-      '{hours}h Ocean Sounds for Sleeping | Theta Waves | No Music',
-      'Calm Ocean Waves at Night | {hours} Hours | Fall Asleep Instantly',
-      'Beach Waves for Relaxation | {hours} Hours Black Screen | Binaural',
+      'Ocean Waves for Deep Sleep | {hours} Hours | No Ads',
+      'Waves Crashing on Beach at Night | {hours} Hours | Sleep Sounds',
+      '{hours}h Ocean Sounds for Sleeping | Moonlit Waves | Theta Waves',
+      'Calm Ocean Waves | {hours} Hours Seaside Ambience | No Music',
+      'Beach Waves at Night | {hours} Hours for Relaxation | Binaural',
     ],
-    description: 'Relax with {hours} hours of ocean wave sounds with embedded theta wave frequencies (6Hz) for meditation. 7 layers: deep surf, shore wash, foam fizz, pebble undertow, distant seabirds, and sub-perceptual theta binaural beats.\n\nTheta binaural beats (210Hz/216Hz = 6Hz theta) promote the drowsy pre-sleep state and deep meditation.\n\nNo ads to interrupt your peace. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#ocean #waves #oceanwaves #thetawaves #meditation #binaural #ambient #blackscreen #deepsleep #noads #beach #seasounds',
-    tags: ['ocean waves', 'ocean sounds for sleeping', 'sea sounds', 'theta waves', 'binaural beats', 'meditation', 'sleep', 'ambient', 'nature sounds', 'relaxation', 'beach', 'black screen', 'no ads', 'waves crashing'],
+    description: 'Relax with {hours} hours of ocean wave sounds with embedded theta wave frequencies (6Hz) for meditation. 7 layers: deep surf, shore wash, foam fizz, pebble undertow, distant seabirds, and sub-perceptual theta binaural beats.\n\nTheta binaural beats (210Hz/216Hz = 6Hz theta) promote the drowsy pre-sleep state and deep meditation.\n\nNo ads to interrupt your peace. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#ocean #waves #oceanwaves #thetawaves #meditation #binaural #ambient #ambience #cozy #deepsleep #noads #beach #seasounds',
+    tags: ['ocean waves', 'ocean sounds for sleeping', 'sea sounds', 'theta waves', 'binaural beats', 'meditation', 'sleep', 'ambient', 'nature sounds', 'relaxation', 'beach', 'cozy ambience','no ads', 'waves crashing'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.5"`,     // wave wash
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.3"`,    // deep surf undertow
@@ -151,14 +151,14 @@ const CATEGORIES = [
   {
     name: 'fireplace',
     title_templates: [
-      'Cozy Fireplace Crackling | {hours} Hours | Black Screen No Ads',
-      'Crackling Fire Sounds for Sleep | {hours} Hours Black Screen',
-      '{hours}h Fireplace Ambience | Fall Asleep to Crackling Fire | No Ads',
-      'Warm Fireplace at Night | {hours} Hours for Relaxation | No Music',
-      'Crackling Fireplace Sounds | {hours} Hours | Cozy Sleep Ambience',
+      'Cozy Fireplace Crackling | {hours} Hours | Warm Ambience No Ads',
+      'Crackling Fire Sounds for Sleep | {hours} Hours Cozy Cabin',
+      '{hours}h Fireplace Ambience | Fall Asleep by the Fire | No Ads',
+      'Warm Fireplace at Night | {hours} Hours Crackling Embers',
+      'Crackling Fireplace | {hours} Hours | Cozy Winter Night Ambience',
     ],
-    description: '{hours} hours of crackling fireplace with embedded alpha wave frequencies (10Hz) for calm relaxation. 7 layers: sharp crackle pops, warm ember drone, wood shifts, deep hearth resonance, soft ash settling, and sub-perceptual alpha binaural beats.\n\nAlpha binaural beats (315Hz/325Hz = 10Hz alpha) promote calm, alert relaxation — perfect for reading or unwinding.\n\nNo ads. Just crackling warmth. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#fireplace #cracklingfire #cozy #alphawaves #binaural #relaxation #blackscreen #noads #sleep #ambient',
-    tags: ['fireplace', 'crackling fire', 'fireplace sounds', 'cozy fireplace', 'alpha waves', 'binaural beats', 'cozy', 'relaxation', 'sleep', 'ambient', 'warm', 'black screen', 'no ads', 'crackling fire for sleep'],
+    description: '{hours} hours of crackling fireplace with embedded alpha wave frequencies (10Hz) for calm relaxation. 7 layers: sharp crackle pops, warm ember drone, wood shifts, deep hearth resonance, soft ash settling, and sub-perceptual alpha binaural beats.\n\nAlpha binaural beats (315Hz/325Hz = 10Hz alpha) promote calm, alert relaxation — perfect for reading or unwinding.\n\nNo ads. Just crackling warmth. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#fireplace #cracklingfire #cozy #alphawaves #binaural #relaxation #ambience #cozy #noads #sleep #ambient',
+    tags: ['fireplace', 'crackling fire', 'fireplace sounds', 'cozy fireplace', 'alpha waves', 'binaural beats', 'cozy', 'relaxation', 'sleep', 'ambient', 'warm', 'cozy ambience','no ads', 'crackling fire for sleep'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=white:r=44100:a=0.25"`,   // crackle pops
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.2"`,    // warm ember hum
@@ -188,14 +188,14 @@ const CATEGORIES = [
   {
     name: 'wind',
     title_templates: [
-      'Howling Wind Sounds | {hours} Hours Black Screen | Deep Sleep No Ads',
-      'Wind Through Trees | {hours} Hours for Sleeping | Black Screen',
-      '{hours}h Winter Wind Sounds | Fall Asleep Fast | No Music No Ads',
-      'Blizzard Wind Sounds | {hours} Hours | Deep Sleep Binaural Beats',
-      'Wind Storm at Night | {hours} Hours Black Screen | Sleep Sounds',
+      'Howling Wind Sounds | {hours} Hours | Snowy Night Ambience No Ads',
+      'Wind Through Trees at Night | {hours} Hours for Sleeping',
+      '{hours}h Winter Wind and Snow | Fall Asleep Fast | No Music',
+      'Blizzard Wind Sounds | {hours} Hours | Cozy Cabin Ambience',
+      'Wind Storm at Night | {hours} Hours | Deep Sleep Binaural Beats',
     ],
-    description: '{hours} hours of wind through trees with embedded delta wave frequencies (3Hz) for deep sleep. 7 layers: low howling wind, leaf rustle, deep gusts, chimney whistle, distant creaking, and sub-perceptual delta binaural beats.\n\nDelta binaural beats (150Hz/153Hz = 3Hz delta) guide your brainwaves into deep, restorative sleep.\n\nNo ads to wake you up. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#wind #windsounds #howlingwind #deltawaves #binaural #sleep #nature #ambient #blackscreen #noads #blizzard #deepsleep',
-    tags: ['wind sounds', 'howling wind', 'wind sounds for sleeping', 'delta waves', 'binaural beats', 'deep sleep', 'ambient', 'relaxation', 'nature sounds', 'black screen', 'no ads', 'blizzard', 'winter wind'],
+    description: '{hours} hours of wind through trees with embedded delta wave frequencies (3Hz) for deep sleep. 7 layers: low howling wind, leaf rustle, deep gusts, chimney whistle, distant creaking, and sub-perceptual delta binaural beats.\n\nDelta binaural beats (150Hz/153Hz = 3Hz delta) guide your brainwaves into deep, restorative sleep.\n\nNo ads to wake you up. Subscribe for daily ambient sounds.\n\nSupport: https://snipelink.com\n\n#wind #windsounds #howlingwind #deltawaves #binaural #sleep #nature #ambient #ambience #cozy #noads #blizzard #deepsleep',
+    tags: ['wind sounds', 'howling wind', 'wind sounds for sleeping', 'delta waves', 'binaural beats', 'deep sleep', 'ambient', 'relaxation', 'nature sounds', 'cozy ambience','no ads', 'blizzard', 'winter wind'],
     audio_inputs: (dur) => [
       `-f lavfi -i "anoisesrc=d=${dur}:c=brown:r=44100:a=0.5"`,    // low howl
       `-f lavfi -i "anoisesrc=d=${dur}:c=pink:r=44100:a=0.15"`,    // leaf rustle
@@ -256,86 +256,136 @@ function getYouTube() {
 }
 
 // ─── Thumbnail Scenes ────────────────────────────────────
-// Cinematic atmospheric scenes — top ambient channels use cozy scenes, not plain text
+// Cinematic cozy thumbnails — what top ambient channels actually use:
+// Warm/moody scenes, big readable text, duration badge, atmospheric details
 const THUMB_SCENES = {
   rain: {
-    bgGradient: ['#0a1628', '#1a2a4a'],
+    bgGradient: ['#0c1a2e', '#1a2e4a'],
     sceneElements: `
-      <rect x="300" y="100" width="680" height="450" rx="8" fill="#1a1a2e" opacity="0.9"/>
-      <rect x="320" y="120" width="640" height="410" rx="4" fill="#0d1b2a" opacity="0.8"/>
-      <!-- Rain streaks on window -->
-      ${Array.from({length: 40}, (_, i) => `<line x1="${320 + (i * 16)}" y1="${120 + (i % 7) * 20}" x2="${325 + (i * 16)}" y2="${180 + (i % 5) * 30}" stroke="rgba(150,180,220,0.3)" stroke-width="1.5"/>`).join('')}
-      <!-- Warm glow from inside -->
-      <ellipse cx="640" cy="400" rx="250" ry="120" fill="rgba(255,160,50,0.08)"/>
-      <ellipse cx="640" cy="420" rx="150" ry="60" fill="rgba(255,120,30,0.06)"/>
+      <!-- Window frame -->
+      <rect x="200" y="50" width="880" height="550" rx="12" fill="#0a0f1a" stroke="#2a3a5a" stroke-width="3"/>
+      <rect x="210" y="60" width="860" height="530" rx="8" fill="#0d1525"/>
+      <!-- Window pane divider -->
+      <line x1="640" y1="60" x2="640" y2="590" stroke="#2a3a5a" stroke-width="3"/>
+      <line x1="210" y1="320" x2="1070" y2="320" stroke="#2a3a5a" stroke-width="3"/>
+      <!-- Rain streaks on glass — different sizes and angles for realism -->
+      ${Array.from({length: 50}, (_, i) => {
+        const x = 220 + (i * 17);
+        const y = 70 + (i * 31) % 480;
+        const len = 15 + (i % 4) * 12;
+        const op = 0.15 + (i % 3) * 0.12;
+        return `<line x1="${x}" y1="${y}" x2="${x + 2}" y2="${y + len}" stroke="rgba(140,175,220,${op})" stroke-width="${1 + (i % 3) * 0.5}" stroke-linecap="round"/>`;
+      }).join('')}
+      <!-- Warm amber interior glow through window -->
+      <ellipse cx="430" cy="380" rx="180" ry="120" fill="rgba(255,150,50,0.06)"/>
+      <ellipse cx="850" cy="250" rx="150" ry="100" fill="rgba(255,130,40,0.05)"/>
+      <!-- Window sill -->
+      <rect x="180" y="590" width="920" height="20" rx="3" fill="#1a2540"/>
     `,
     accentColor: '#6ea8d7',
   },
   thunder: {
-    bgGradient: ['#060c1a', '#1a1a30'],
+    bgGradient: ['#040810', '#12182a'],
     sceneElements: `
-      <!-- Lightning bolt -->
-      <polygon points="640,50 620,200 660,200 600,380 660,250 630,250 680,80" fill="rgba(200,220,255,0.15)"/>
-      <polygon points="640,60 625,190 655,195 610,360 650,245 635,248 670,90" fill="rgba(255,255,255,0.08)"/>
-      <!-- Storm clouds -->
-      <ellipse cx="400" cy="120" rx="300" ry="80" fill="rgba(30,30,60,0.6)"/>
-      <ellipse cx="700" cy="100" rx="250" ry="70" fill="rgba(25,25,50,0.5)"/>
-      <ellipse cx="550" cy="80" rx="200" ry="60" fill="rgba(40,40,70,0.4)"/>
+      <!-- Storm clouds — layered for depth -->
+      <ellipse cx="300" cy="100" rx="350" ry="90" fill="rgba(20,22,40,0.8)"/>
+      <ellipse cx="750" cy="80" rx="400" ry="100" fill="rgba(15,18,35,0.7)"/>
+      <ellipse cx="500" cy="60" rx="280" ry="70" fill="rgba(25,28,50,0.6)"/>
+      <ellipse cx="950" cy="130" rx="300" ry="80" fill="rgba(18,20,38,0.5)"/>
+      <!-- Lightning bolt — jagged realistic shape -->
+      <polygon points="580,30 560,180 600,185 540,350 595,230 570,225 610,60" fill="rgba(180,200,255,0.25)"/>
+      <polygon points="582,40 565,175 597,180 548,335 590,228 574,224 605,65" fill="rgba(220,235,255,0.15)"/>
+      <!-- Lightning glow -->
+      <ellipse cx="570" cy="200" rx="200" ry="180" fill="rgba(140,160,255,0.04)"/>
       <!-- Rain -->
-      ${Array.from({length: 30}, (_, i) => `<line x1="${100 + (i * 40)}" y1="${200 + (i % 5) * 40}" x2="${105 + (i * 40)}" y2="${280 + (i % 3) * 50}" stroke="rgba(120,140,200,0.2)" stroke-width="1"/>`).join('')}
+      ${Array.from({length: 45}, (_, i) => {
+        const x = 50 + (i * 27);
+        const y = 200 + (i * 23) % 400;
+        return `<line x1="${x}" y1="${y}" x2="${x + 3}" y2="${y + 25 + (i % 3) * 10}" stroke="rgba(100,120,180,${0.1 + (i % 4) * 0.06})" stroke-width="1"/>`;
+      }).join('')}
     `,
     accentColor: '#8090c0',
   },
   ocean: {
-    bgGradient: ['#071e35', '#0c3a60'],
+    bgGradient: ['#041520', '#0c3050'],
     sceneElements: `
-      <!-- Waves -->
-      <path d="M0,500 Q160,460 320,500 Q480,540 640,500 Q800,460 960,500 Q1120,540 1280,500 L1280,720 L0,720 Z" fill="rgba(10,50,90,0.5)"/>
-      <path d="M0,520 Q160,490 320,520 Q480,550 640,520 Q800,490 960,520 Q1120,550 1280,520 L1280,720 L0,720 Z" fill="rgba(8,40,75,0.6)"/>
-      <path d="M0,550 Q200,530 400,550 Q600,570 800,550 Q1000,530 1280,550 L1280,720 L0,720 Z" fill="rgba(5,30,60,0.7)"/>
+      <!-- Night sky gradient -->
+      <rect x="0" y="0" width="1280" height="350" fill="rgba(4,15,30,0.5)"/>
       <!-- Moon -->
-      <circle cx="900" cy="120" r="60" fill="rgba(220,230,255,0.12)"/>
-      <circle cx="915" cy="110" r="55" fill="#071e35"/>
-      <!-- Moon reflection -->
-      <ellipse cx="900" cy="550" rx="40" ry="100" fill="rgba(180,200,230,0.04)"/>
+      <circle cx="920" cy="130" r="65" fill="rgba(230,240,255,0.15)"/>
+      <circle cx="938" cy="118" r="60" fill="#041520"/>
+      <!-- Moon glow -->
+      <ellipse cx="920" cy="130" rx="120" ry="120" fill="rgba(180,200,230,0.04)"/>
+      <!-- Wave layers — overlapping curves create ocean depth -->
+      <path d="M0,450 Q120,420 240,450 Q360,480 480,450 Q600,420 720,450 Q840,480 960,450 Q1080,420 1200,450 Q1280,465 1280,450 L1280,720 L0,720 Z" fill="rgba(8,40,70,0.5)"/>
+      <path d="M0,480 Q150,455 300,480 Q450,505 600,480 Q750,455 900,480 Q1050,505 1200,480 L1280,720 L0,720 Z" fill="rgba(6,30,55,0.6)"/>
+      <path d="M0,510 Q200,495 400,510 Q600,525 800,510 Q1000,495 1200,510 L1280,720 L0,720 Z" fill="rgba(4,22,42,0.7)"/>
+      <path d="M0,545 Q180,535 360,545 Q540,555 720,545 Q900,535 1080,545 L1280,720 L0,720 Z" fill="rgba(3,18,35,0.8)"/>
+      <!-- Moon reflection on water — vertical shimmer -->
+      <ellipse cx="920" cy="500" rx="8" ry="60" fill="rgba(200,220,250,0.06)"/>
+      <ellipse cx="920" cy="530" rx="15" ry="40" fill="rgba(180,200,240,0.04)"/>
+      <ellipse cx="920" cy="560" rx="25" ry="30" fill="rgba(160,185,230,0.03)"/>
+      <!-- Stars -->
+      ${Array.from({length: 20}, (_, i) => `<circle cx="${80 + (i * 57) % 1200}" cy="${30 + (i * 41) % 280}" r="${0.8 + (i % 3) * 0.5}" fill="rgba(200,215,240,${0.06 + (i % 4) * 0.03})"/>`).join('')}
     `,
     accentColor: '#5a9cc0',
   },
   fireplace: {
-    bgGradient: ['#120600', '#2a1000'],
+    bgGradient: ['#0d0400', '#1a0a00'],
     sceneElements: `
-      <!-- Fireplace frame -->
-      <rect x="340" y="250" width="600" height="400" rx="0" fill="#1a0800" stroke="#3d1a00" stroke-width="4"/>
-      <rect x="360" y="270" width="560" height="360" rx="0" fill="#0d0400"/>
+      <!-- Dark cozy room -->
+      <rect x="0" y="0" width="1280" height="720" fill="rgba(15,6,0,0.3)"/>
+      <!-- Stone fireplace surround -->
+      <rect x="300" y="200" width="680" height="470" rx="0" fill="#1a0c04" stroke="#3d2210" stroke-width="5"/>
+      <rect x="280" y="180" width="720" height="30" rx="4" fill="#2a1408"/>
+      <!-- Mantle -->
+      <rect x="260" y="170" width="760" height="20" rx="3" fill="#3d2210"/>
+      <!-- Fire opening -->
+      <rect x="340" y="250" width="600" height="370" rx="8" fill="#080200"/>
+      <!-- Flames — layered organic shapes -->
+      <path d="M500,620 Q510,470 540,400 Q560,430 570,380 Q590,450 600,620 Z" fill="rgba(255,100,0,0.3)"/>
+      <path d="M580,620 Q600,440 640,370 Q670,420 690,380 Q710,460 720,620 Z" fill="rgba(255,130,10,0.25)"/>
+      <path d="M650,620 Q665,500 680,430 Q700,480 720,450 Q740,510 760,620 Z" fill="rgba(255,80,0,0.2)"/>
+      <path d="M540,620 Q555,490 575,440 Q600,500 620,620 Z" fill="rgba(255,180,40,0.2)"/>
+      <path d="M600,620 Q620,460 650,400 Q675,460 695,620 Z" fill="rgba(255,200,80,0.15)"/>
       <!-- Fire glow -->
-      <ellipse cx="640" cy="550" rx="200" ry="100" fill="rgba(255,100,0,0.15)"/>
-      <ellipse cx="640" cy="520" rx="120" ry="80" fill="rgba(255,60,0,0.12)"/>
-      <ellipse cx="640" cy="500" rx="80" ry="60" fill="rgba(255,150,20,0.1)"/>
-      <!-- Flame shapes -->
-      <path d="M600,600 Q610,450 640,400 Q670,450 680,600 Z" fill="rgba(255,120,0,0.2)"/>
-      <path d="M620,600 Q635,470 650,430 Q665,470 680,600 Z" fill="rgba(255,180,40,0.15)"/>
-      <path d="M570,600 Q590,500 620,460 Q640,520 660,600 Z" fill="rgba(255,80,0,0.12)"/>
-      <!-- Warm room glow -->
-      <ellipse cx="640" cy="350" rx="400" ry="250" fill="rgba(255,100,20,0.04)"/>
+      <ellipse cx="640" cy="500" rx="250" ry="150" fill="rgba(255,100,10,0.12)"/>
+      <ellipse cx="640" cy="450" rx="180" ry="120" fill="rgba(255,140,30,0.08)"/>
+      <!-- Ember dots -->
+      ${Array.from({length: 12}, (_, i) => `<circle cx="${450 + (i * 35) % 380}" cy="${350 + (i * 23) % 200}" r="${1 + (i % 3)}" fill="rgba(255,${150 + (i * 20) % 100},${20 + (i * 10) % 60},${0.15 + (i % 4) * 0.06})"/>`).join('')}
+      <!-- Warm room glow from fire -->
+      <ellipse cx="640" cy="350" rx="500" ry="300" fill="rgba(255,80,10,0.03)"/>
     `,
     accentColor: '#ff8c40',
   },
   wind: {
-    bgGradient: ['#151a22', '#252d3a'],
+    bgGradient: ['#101520', '#1a2230'],
     sceneElements: `
+      <!-- Snowy night landscape -->
+      <!-- Snow ground -->
+      <path d="M0,550 Q200,540 400,555 Q600,545 800,560 Q1000,550 1280,555 L1280,720 L0,720 Z" fill="rgba(35,40,55,0.6)"/>
+      <path d="M0,580 Q300,570 600,585 Q900,575 1280,580 L1280,720 L0,720 Z" fill="rgba(30,35,48,0.7)"/>
+      <!-- Tree silhouettes — pine trees -->
+      <path d="M80,550 L110,350 L140,550 Z" fill="rgba(15,18,28,0.8)"/>
+      <path d="M90,550 L110,380 L130,550 Z" fill="rgba(18,22,32,0.6)"/>
+      <path d="M150,555 L175,370 L200,555 Z" fill="rgba(12,16,25,0.7)"/>
+      <path d="M1050,550 L1080,320 L1110,550 Z" fill="rgba(15,18,28,0.8)"/>
+      <path d="M1060,550 L1080,360 L1100,550 Z" fill="rgba(18,22,32,0.6)"/>
+      <path d="M1130,555 L1155,400 L1180,555 Z" fill="rgba(12,16,25,0.7)"/>
+      <path d="M1170,560 L1190,380 L1210,560 Z" fill="rgba(14,17,26,0.6)"/>
+      <!-- Distant cabin with warm window -->
+      <rect x="550" y="480" width="80" height="60" fill="rgba(20,22,30,0.8)"/>
+      <polygon points="540,480 590,450 640,480" fill="rgba(25,28,38,0.7)"/>
+      <rect x="570" y="500" width="20" height="25" fill="rgba(255,160,50,0.15)"/>
+      <ellipse cx="580" cy="510" rx="30" ry="25" fill="rgba(255,140,40,0.04)"/>
+      <!-- Snow particles -->
+      ${Array.from({length: 30}, (_, i) => `<circle cx="${40 + (i * 41) % 1200}" cy="${30 + (i * 37) % 500}" r="${1.5 + (i % 3)}" fill="rgba(180,190,210,${0.08 + (i % 5) * 0.04})"/>`).join('')}
       <!-- Misty layers -->
-      <ellipse cx="300" cy="400" rx="500" ry="80" fill="rgba(60,70,90,0.15)"/>
-      <ellipse cx="800" cy="350" rx="400" ry="60" fill="rgba(50,60,80,0.12)"/>
-      <ellipse cx="500" cy="300" rx="600" ry="40" fill="rgba(70,80,100,0.08)"/>
-      <!-- Trees silhouette -->
-      <path d="M100,720 L120,400 L140,720 Z" fill="rgba(20,25,35,0.6)"/>
-      <path d="M130,720 L150,350 L170,720 Z" fill="rgba(20,25,35,0.5)"/>
-      <path d="M1100,720 L1120,380 L1140,720 Z" fill="rgba(20,25,35,0.6)"/>
-      <path d="M1140,720 L1160,420 L1180,720 Z" fill="rgba(20,25,35,0.5)"/>
-      <!-- Wind streaks -->
-      ${Array.from({length: 15}, (_, i) => `<line x1="${100 + (i * 80)}" y1="${200 + (i % 4) * 60}" x2="${250 + (i * 80)}" y2="${195 + (i % 4) * 60}" stroke="rgba(100,110,130,0.08)" stroke-width="2"/>`).join('')}
+      <ellipse cx="400" cy="480" rx="500" ry="40" fill="rgba(40,50,65,0.1)"/>
+      <ellipse cx="900" cy="500" rx="400" ry="35" fill="rgba(35,45,60,0.08)"/>
       <!-- Moon -->
-      <circle cx="960" cy="150" r="45" fill="rgba(200,210,230,0.1)"/>
+      <circle cx="980" cy="120" r="50" fill="rgba(200,215,240,0.12)"/>
+      <circle cx="995" cy="110" r="46" fill="#101520"/>
     `,
     accentColor: '#8090a0',
   },
@@ -367,13 +417,22 @@ async function generateThumbnail(category, hours, outputPath) {
       <rect width="${width}" height="${height}" fill="url(#bg)" />
       ${scene.sceneElements}
       <!-- Bottom gradient overlay for text readability -->
-      <rect x="0" y="400" width="${width}" height="320" fill="url(#bg)" opacity="0.5"/>
-      <!-- Duration badge top-right -->
-      <rect x="${width - 200}" y="30" width="170" height="55" rx="8" fill="rgba(0,0,0,0.6)"/>
-      <text x="${width - 115}" y="67" font-family="Arial, sans-serif" font-size="30" font-weight="bold" fill="white" text-anchor="middle">${hours} HOURS</text>
-      <!-- Main title text bottom-left (minimal like top channels) -->
-      <text x="50" y="${height - 100}" font-family="Arial, sans-serif" font-size="56" font-weight="bold" fill="white" filter="url(#softglow)">${category.text}</text>
-      <text x="50" y="${height - 50}" font-family="Arial, sans-serif" font-size="28" fill="${scene.accentColor}" opacity="0.9">Deep Sleep | Black Screen | No Ads</text>
+      <defs>
+        <linearGradient id="textfade" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" style="stop-color:${scene.bgGradient[1]};stop-opacity:0"/>
+          <stop offset="100%" style="stop-color:${scene.bgGradient[1]};stop-opacity:0.85"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="450" width="${width}" height="270" fill="url(#textfade)"/>
+      <!-- Duration badge top-right — bold and eye-catching -->
+      <rect x="${width - 220}" y="25" width="190" height="60" rx="10" fill="rgba(0,0,0,0.7)" stroke="${scene.accentColor}" stroke-width="2"/>
+      <text x="${width - 125}" y="65" font-family="Arial, sans-serif" font-size="32" font-weight="bold" fill="white" text-anchor="middle">${hours} HOURS</text>
+      <!-- NO ADS badge top-left -->
+      <rect x="30" y="25" width="120" height="45" rx="8" fill="rgba(0,0,0,0.6)"/>
+      <text x="90" y="55" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="#4ade80" text-anchor="middle">NO ADS</text>
+      <!-- Main title text bottom-left — large, glowing, cinematic -->
+      <text x="50" y="${height - 95}" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="white" filter="url(#glow)">${category.text}</text>
+      <text x="50" y="${height - 45}" font-family="Arial, sans-serif" font-size="26" fill="${scene.accentColor}" opacity="0.9">Deep Sleep | Binaural Beats | Cozy Ambience</text>
     </svg>`;
 
   await sharp(Buffer.from(svg))
@@ -382,74 +441,109 @@ async function generateThumbnail(category, hours, outputPath) {
 }
 
 // ─── Visual Effects per Category ─────────────────────────
-// Multi-layer animated visuals with micro-transitions (breathing brightness, drifting layers)
-// Uses eval=frame on eq for time-based expressions so visuals slowly shift
+// Scene-based micro-animations that give the brain something to watch.
+// Top ambient channels use: rain streaks on glass, flickering fire, rolling waves, drifting snow.
+// All generated with ffmpeg lavfi — multiple layers at different speeds create depth + parallax.
+// The 60s loop is seamless because noise/scroll patterns repeat naturally.
 const VISUAL_EFFECTS = {
+  // RAIN: Rain streaks sliding down a dark window with warm interior glow behind
+  // Multiple rain layers at different speeds = parallax depth (close drops fast, far drops slow)
+  // Warm amber glow pulses gently in the lower half (like a lamp behind the window)
   rain: (dur) => `\
-    color=c=0x0a1628:s=1280x720:r=24:d=${dur},noise=alls=25:allf=t[base];\
-    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=80:allf=t,eq=brightness=-0.45[drops1];\
-    [drops1]boxblur=0:0:0:2,scroll=vertical=0.04:horizontal=0[rain1];\
-    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=60:allf=t,eq=brightness=-0.5[drops2];\
-    [drops2]boxblur=0:0:0:5,scroll=vertical=0.07:horizontal=0.001[rain2];\
-    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=40:allf=t,eq=brightness=-0.55[drops3];\
-    [drops3]boxblur=0:0:0:8,scroll=vertical=0.025:horizontal=-0.0005[rain3];\
-    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=95:allf=t,eq=brightness=-0.6[drops4];\
-    [drops4]boxblur=0:0:0:1,scroll=vertical=0.1:horizontal=0.002[rain4];\
-    [base][rain1]blend=all_mode=screen:all_opacity=0.15[l1];\
-    [l1][rain2]blend=all_mode=screen:all_opacity=0.1[l2];\
-    [l2][rain3]blend=all_mode=screen:all_opacity=0.07[l3];\
-    [l3][rain4]blend=all_mode=screen:all_opacity=0.04[l4];\
-    [l4]eq=brightness=0.012*sin(2*PI*t/40)+0.006*sin(2*PI*t/137):saturation=1.0+0.08*sin(2*PI*t/90):eval=frame[breathe];\
-    [breathe]colorbalance=bs=0.06:bm=0.03[tint];\
-    [tint]vignette=PI/4[vout]`,
-  thunder: (dur) => `\
-    color=c=0x060c1a:s=1280x720:r=24:d=${dur},noise=alls=35:allf=t[base];\
-    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=90:allf=t,eq=brightness=-0.4[drops1];\
-    [drops1]boxblur=0:0:0:3,scroll=vertical=0.05:horizontal=0[rain1];\
-    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=70:allf=t,eq=brightness=-0.45[drops2];\
-    [drops2]boxblur=0:0:0:6,scroll=vertical=0.08:horizontal=0.001[rain2];\
-    color=c=0x101830:s=1280x720:r=24:d=${dur},noise=alls=50:allf=t,eq=brightness=-0.5[drops3];\
-    [drops3]boxblur=0:0:0:10,scroll=vertical=0.035:horizontal=-0.001[rain3];\
-    [base][rain1]blend=all_mode=screen:all_opacity=0.18[l1];\
-    [l1][rain2]blend=all_mode=screen:all_opacity=0.12[l2];\
-    [l2][rain3]blend=all_mode=screen:all_opacity=0.06[l3];\
-    [l3]eq=brightness=0.04*sin(2*PI*t/35)*sin(2*PI*t/35)*sin(2*PI*t/35)*sin(2*PI*t/35)+0.01*sin(2*PI*t/90):eval=frame[lit];\
-    [lit]colorbalance=bs=0.08:bh=0.05[tint];\
+    color=c=0x0c1a2e:s=1280x720:r=24:d=${dur}[bg];\
+    color=c=0x1a0e04:s=1280x720:r=24:d=${dur}[warmbase];\
+    [bg][warmbase]blend=all_mode=screen:all_opacity='0.08+0.03*sin(2*PI*X/1280)*sin(2*PI*Y/720+t/8)':eval=frame[room];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=90:allf=t,eq=brightness=-0.38[d1];\
+    [d1]boxblur=0:0:0:1,scroll=vertical=0.08:horizontal=0[close_rain];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=65:allf=t,eq=brightness=-0.48[d2];\
+    [d2]boxblur=0:0:0:4,scroll=vertical=0.04:horizontal=0.001[mid_rain];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=45:allf=t,eq=brightness=-0.55[d3];\
+    [d3]boxblur=0:0:0:8,scroll=vertical=0.02:horizontal=-0.0005[far_rain];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=100:allf=t,eq=brightness=-0.6[d4];\
+    [d4]boxblur=0:0:0:0,scroll=vertical=0.12:horizontal=0.003[splatter];\
+    [room][close_rain]blend=all_mode=screen:all_opacity=0.18[r1];\
+    [r1][mid_rain]blend=all_mode=screen:all_opacity=0.12[r2];\
+    [r2][far_rain]blend=all_mode=screen:all_opacity=0.06[r3];\
+    [r3][splatter]blend=all_mode=screen:all_opacity=0.03[r4];\
+    [r4]eq=brightness='0.015*sin(2*PI*t/40)+0.008*sin(2*PI*t/137)':saturation=1.05:eval=frame[breathe];\
+    [breathe]colorbalance=bs=0.04:bm=0.02:rs=0.02:rm=0.015[tint];\
     [tint]vignette=PI/3.5[vout]`,
+
+  // THUNDER: Dark storm sky with rain + periodic lightning flashes
+  // Lightning = brightness spike using sin^8 (sharp pulse), multiple rain layers
+  // Blue-white flash illuminates everything for a split second then fades
+  thunder: (dur) => `\
+    color=c=0x060c1a:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t[sky];\
+    color=c=0x0a1530:s=1280x720:r=24:d=${dur},noise=alls=35:allf=t[clouds];\
+    [sky][clouds]blend=all_mode=softlight:all_opacity=0.5[stormsky];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=90:allf=t,eq=brightness=-0.35[d1];\
+    [d1]boxblur=0:0:0:2,scroll=vertical=0.06:horizontal=0.002[rain1];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=70:allf=t,eq=brightness=-0.42[d2];\
+    [d2]boxblur=0:0:0:5,scroll=vertical=0.09:horizontal=-0.001[rain2];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=50:allf=t,eq=brightness=-0.52[d3];\
+    [d3]boxblur=0:0:0:10,scroll=vertical=0.03:horizontal=0[rain3];\
+    [stormsky][rain1]blend=all_mode=screen:all_opacity=0.2[s1];\
+    [s1][rain2]blend=all_mode=screen:all_opacity=0.14[s2];\
+    [s2][rain3]blend=all_mode=screen:all_opacity=0.06[s3];\
+    [s3]eq=brightness='0.18*pow(sin(2*PI*t/17),8)+0.10*pow(sin(2*PI*t/31+1.5),8)+0.06*pow(sin(2*PI*t/47+3),8)+0.01*sin(2*PI*t/90)':eval=frame[lit];\
+    [lit]colorbalance=bs=0.06:bh=0.04:bm=0.03[tint];\
+    [tint]vignette=PI/3.5[vout]`,
+
+  // OCEAN: Moonlit water surface with gentle wave motion + moon reflection
+  // Horizontal scroll creates wave drift, multiple layers at different speeds = depth
+  // Brightness cycles simulate wave crests catching moonlight
   ocean: (dur) => `\
-    color=c=0x071e35:s=1280x720:r=24:d=${dur},noise=alls=12:allf=t[deep];\
-    color=c=0x0c3050:s=1280x720:r=24:d=${dur},noise=alls=18:allf=t[surface];\
-    color=c=0x1a4a70:s=1280x720:r=24:d=${dur},noise=alls=8:allf=t[foam];\
-    color=c=0x0a3560:s=1280x720:r=24:d=${dur},noise=alls=6:allf=t[shimmer];\
-    [deep][surface]blend=all_mode=softlight:all_opacity=0.35[water];\
-    [water][foam]blend=all_mode=screen:all_opacity=0.05[ocean1];\
-    [ocean1][shimmer]blend=all_mode=overlay:all_opacity=0.04[ocean2];\
-    [ocean2]scroll=horizontal=0.002:vertical=0[drift];\
-    [drift]eq=brightness=0.018*sin(2*PI*t/20)+0.008*sin(2*PI*t/53):saturation=1.1+0.08*sin(2*PI*t/50):eval=frame[breathe];\
-    [breathe]colorbalance=bs=0.08:bm=0.05:gs=-0.02[tint];\
+    color=c=0x051525:s=1280x720:r=24:d=${dur}[deepsky];\
+    color=c=0x0a2540:s=1280x720:r=24:d=${dur},noise=alls=8:allf=t[water1];\
+    color=c=0x0c3050:s=1280x720:r=24:d=${dur},noise=alls=14:allf=t[water2];\
+    color=c=0x153d5e:s=1280x720:r=24:d=${dur},noise=alls=6:allf=t[shimmer];\
+    color=c=0x1a5070:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t,eq=brightness=-0.5[foam];\
+    [deepsky][water1]blend=all_mode=softlight:all_opacity=0.4[w1];\
+    [w1][water2]blend=all_mode=screen:all_opacity=0.12[w2];\
+    [w2]scroll=horizontal=0.003:vertical=0[drift1];\
+    [drift1][shimmer]blend=all_mode=overlay:all_opacity='0.05+0.03*sin(2*PI*t/12)':eval=frame[w3];\
+    [w3][foam]blend=all_mode=screen:all_opacity='0.02+0.015*sin(2*PI*t/8)':eval=frame[w4];\
+    [w4]eq=brightness='0.02*sin(2*PI*t/18)+0.012*sin(2*PI*t/7)+0.006*sin(2*PI*t/53)':saturation='1.1+0.06*sin(2*PI*t/30)':eval=frame[breathe];\
+    [breathe]colorbalance=bs=0.07:bm=0.04:gs=-0.02[tint];\
     [tint]vignette=PI/4[vout]`,
+
+  // FIREPLACE: Warm flickering flames with ember glow and occasional bright pops
+  // Multiple orange/amber noise layers blended create organic flame movement
+  // Fast brightness oscillation = flame flicker, slow = overall glow breathing
+  // Heavy warm color balance makes it feel like real firelight
   fireplace: (dur) => `\
-    color=c=0x120600:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t[dark_base];\
-    color=c=0x2a0e00:s=1280x720:r=24:d=${dur},noise=alls=55:allf=t[flicker1];\
-    color=c=0x401800:s=1280x720:r=24:d=${dur},noise=alls=35:allf=t[flicker2];\
-    color=c=0x601800:s=1280x720:r=24:d=${dur},noise=alls=70:allf=t[spark];\
-    [dark_base][flicker1]blend=all_mode=screen:all_opacity=0.4[warm1];\
-    [warm1][flicker2]blend=all_mode=screen:all_opacity=0.2[warm2];\
-    [warm2][spark]blend=all_mode=screen:all_opacity=0.04[warm3];\
-    [warm3]eq=brightness=0.05*sin(2*PI*t/3)+0.03*sin(2*PI*t/7)+0.015*sin(2*PI*t/19):contrast=1.1+0.05*sin(2*PI*t/11):saturation=1.6+0.2*sin(2*PI*t/13):eval=frame[glow];\
-    [glow]colorbalance=rs=0.4:gs=-0.1:bs=-0.3:rm=0.28:gm=-0.05:bm=-0.25[orange];\
-    [orange]vignette=PI/3[vout]`,
+    color=c=0x0d0400:s=1280x720:r=24:d=${dur},noise=alls=15:allf=t[room];\
+    color=c=0x2a0e00:s=1280x720:r=24:d=${dur},noise=alls=60:allf=t[flame1];\
+    color=c=0x401800:s=1280x720:r=24:d=${dur},noise=alls=40:allf=t[flame2];\
+    color=c=0x803000:s=1280x720:r=24:d=${dur},noise=alls=80:allf=t[ember];\
+    color=c=0xff6000:s=1280x720:r=24:d=${dur},noise=alls=95:allf=t,eq=brightness=-0.7[spark];\
+    [room][flame1]blend=all_mode=screen:all_opacity=0.45[f1];\
+    [f1][flame2]blend=all_mode=screen:all_opacity=0.25[f2];\
+    [f2][ember]blend=all_mode=screen:all_opacity=0.08[f3];\
+    [f3][spark]blend=all_mode=screen:all_opacity=0.02[f4];\
+    [f4]eq=brightness='0.06*sin(2*PI*t/2.3)+0.04*sin(2*PI*t/5.7)+0.02*sin(2*PI*t/0.7)+0.01*sin(2*PI*t/17)':contrast='1.15+0.06*sin(2*PI*t/9)':saturation='1.7+0.25*sin(2*PI*t/11)':eval=frame[flicker];\
+    [flicker]colorbalance=rs=0.45:gs=-0.08:bs=-0.35:rm=0.3:gm=-0.04:bm=-0.28:rh=0.15:gh=-0.02:bh=-0.12[warm];\
+    [warm]vignette=PI/3[vout]`,
+
+  // WIND: Snowy night with drifting snow particles and misty layers
+  // Diagonal scroll = snow blowing sideways, multiple layers = depth
+  // Slow horizontal fog drift + faint brightness breathing = moonlit atmosphere
   wind: (dur) => `\
-    color=c=0x151a22:s=1280x720:r=24:d=${dur},noise=alls=30:allf=t[base];\
-    color=c=0x1e2530:s=1280x720:r=24:d=${dur},noise=alls=20:allf=t[mist1];\
-    color=c=0x252d3a:s=1280x720:r=24:d=${dur},noise=alls=15:allf=t[mist2];\
-    color=c=0x1a2035:s=1280x720:r=24:d=${dur},noise=alls=10:allf=t[mist3];\
-    [base][mist1]blend=all_mode=softlight:all_opacity=0.4[fog1];\
-    [fog1][mist2]blend=all_mode=screen:all_opacity=0.08[fog2];\
-    [fog2][mist3]blend=all_mode=overlay:all_opacity=0.05[fog3];\
-    [fog3]scroll=horizontal=0.003:vertical=0.0005[drift];\
-    [drift]eq=brightness=0.01*sin(2*PI*t/60)+0.005*sin(2*PI*t/170):saturation=1.0+0.05*sin(2*PI*t/80):eval=frame[breathe];\
-    [breathe]colorbalance=bs=0.04:bm=0.02[tint];\
+    color=c=0x111820:s=1280x720:r=24:d=${dur},noise=alls=10:allf=t[night];\
+    color=c=0x1a2230:s=1280x720:r=24:d=${dur},noise=alls=18:allf=t[mist];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=70:allf=t,eq=brightness=-0.55[snow1];\
+    [snow1]boxblur=1:1:1:1,scroll=vertical=0.015:horizontal=0.025[drift_snow1];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=50:allf=t,eq=brightness=-0.6[snow2];\
+    [snow2]boxblur=2:2:2:2,scroll=vertical=0.008:horizontal=0.015[drift_snow2];\
+    color=c=black:s=1280x720:r=24:d=${dur},noise=alls=30:allf=t,eq=brightness=-0.65[snow3];\
+    [snow3]boxblur=4:4:4:4,scroll=vertical=0.004:horizontal=0.008[drift_snow3];\
+    [night][mist]blend=all_mode=softlight:all_opacity=0.4[base];\
+    [base]scroll=horizontal=0.001:vertical=0[fog_drift];\
+    [fog_drift][drift_snow1]blend=all_mode=screen:all_opacity=0.12[s1];\
+    [s1][drift_snow2]blend=all_mode=screen:all_opacity=0.07[s2];\
+    [s2][drift_snow3]blend=all_mode=screen:all_opacity=0.04[s3];\
+    [s3]eq=brightness='0.008*sin(2*PI*t/50)+0.004*sin(2*PI*t/130)':saturation='1.0+0.04*sin(2*PI*t/70)':eval=frame[breathe];\
+    [breathe]colorbalance=bs=0.05:bm=0.03:gs=0.01[tint];\
     [tint]vignette=PI/4[vout]`,
 };
 
