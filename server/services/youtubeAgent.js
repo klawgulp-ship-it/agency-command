@@ -446,13 +446,13 @@ async function generateThumbnail(category, hours, outputPath) {
 // All generated with ffmpeg lavfi — multiple layers at different speeds create depth + parallax.
 // The 60s loop is seamless because noise/scroll patterns repeat naturally.
 const VISUAL_EFFECTS = {
-  // RAIN: Rain streaks sliding down a dark window with warm interior glow behind
-  // Multiple rain layers at different speeds = parallax depth (close drops fast, far drops slow)
-  // Warm amber glow pulses gently in the lower half (like a lamp behind the window)
+  // RAIN: Rain streaks on dark window with warm interior glow
+  // 4 rain layers at different speeds = parallax depth
+  // Warm amber base tint + breathing brightness = cozy room behind glass
   rain: (dur) => `\
-    color=c=0x0c1a2e:s=1280x720:r=24:d=${dur}[bg];\
+    color=c=0x0c1a2e:s=1280x720:r=24:d=${dur},noise=alls=15:allf=t[bg];\
     color=c=0x1a0e04:s=1280x720:r=24:d=${dur}[warmbase];\
-    [bg][warmbase]blend=all_mode=screen:all_opacity='0.08+0.03*sin(2*PI*X/1280)*sin(2*PI*Y/720+t/8)':eval=frame[room];\
+    [bg][warmbase]blend=all_mode=screen:all_opacity=0.06[room];\
     color=c=black:s=1280x720:r=24:d=${dur},noise=alls=90:allf=t,eq=brightness=-0.38[d1];\
     [d1]boxblur=0:0:0:1,scroll=vertical=0.08:horizontal=0[close_rain];\
     color=c=black:s=1280x720:r=24:d=${dur},noise=alls=65:allf=t,eq=brightness=-0.48[d2];\
@@ -465,7 +465,7 @@ const VISUAL_EFFECTS = {
     [r1][mid_rain]blend=all_mode=screen:all_opacity=0.12[r2];\
     [r2][far_rain]blend=all_mode=screen:all_opacity=0.06[r3];\
     [r3][splatter]blend=all_mode=screen:all_opacity=0.03[r4];\
-    [r4]eq=brightness='0.015*sin(2*PI*t/40)+0.008*sin(2*PI*t/137)':saturation=1.05:eval=frame[breathe];\
+    [r4]eq=brightness=0.015*sin(2*PI*t/40)+0.008*sin(2*PI*t/137):saturation=1.05:eval=frame[breathe];\
     [breathe]colorbalance=bs=0.04:bm=0.02:rs=0.02:rm=0.015[tint];\
     [tint]vignette=PI/3.5[vout]`,
 
@@ -485,7 +485,7 @@ const VISUAL_EFFECTS = {
     [stormsky][rain1]blend=all_mode=screen:all_opacity=0.2[s1];\
     [s1][rain2]blend=all_mode=screen:all_opacity=0.14[s2];\
     [s2][rain3]blend=all_mode=screen:all_opacity=0.06[s3];\
-    [s3]eq=brightness='0.18*pow(sin(2*PI*t/17),8)+0.10*pow(sin(2*PI*t/31+1.5),8)+0.06*pow(sin(2*PI*t/47+3),8)+0.01*sin(2*PI*t/90)':eval=frame[lit];\
+    [s3]eq=brightness=0.18*pow(sin(2*PI*t/17),8)+0.10*pow(sin(2*PI*t/31+1.5),8)+0.06*pow(sin(2*PI*t/47+3),8)+0.01*sin(2*PI*t/90):eval=frame[lit];\
     [lit]colorbalance=bs=0.06:bh=0.04:bm=0.03[tint];\
     [tint]vignette=PI/3.5[vout]`,
 
@@ -501,9 +501,9 @@ const VISUAL_EFFECTS = {
     [deepsky][water1]blend=all_mode=softlight:all_opacity=0.4[w1];\
     [w1][water2]blend=all_mode=screen:all_opacity=0.12[w2];\
     [w2]scroll=horizontal=0.003:vertical=0[drift1];\
-    [drift1][shimmer]blend=all_mode=overlay:all_opacity='0.05+0.03*sin(2*PI*t/12)':eval=frame[w3];\
-    [w3][foam]blend=all_mode=screen:all_opacity='0.02+0.015*sin(2*PI*t/8)':eval=frame[w4];\
-    [w4]eq=brightness='0.02*sin(2*PI*t/18)+0.012*sin(2*PI*t/7)+0.006*sin(2*PI*t/53)':saturation='1.1+0.06*sin(2*PI*t/30)':eval=frame[breathe];\
+    [drift1][shimmer]blend=all_mode=overlay:all_opacity=0.06[w3];\
+    [w3][foam]blend=all_mode=screen:all_opacity=0.03[w4];\
+    [w4]eq=brightness=0.02*sin(2*PI*t/18)+0.012*sin(2*PI*t/7)+0.006*sin(2*PI*t/53):saturation=1.1+0.06*sin(2*PI*t/30):eval=frame[breathe];\
     [breathe]colorbalance=bs=0.07:bm=0.04:gs=-0.02[tint];\
     [tint]vignette=PI/4[vout]`,
 
@@ -521,7 +521,7 @@ const VISUAL_EFFECTS = {
     [f1][flame2]blend=all_mode=screen:all_opacity=0.25[f2];\
     [f2][ember]blend=all_mode=screen:all_opacity=0.08[f3];\
     [f3][spark]blend=all_mode=screen:all_opacity=0.02[f4];\
-    [f4]eq=brightness='0.06*sin(2*PI*t/2.3)+0.04*sin(2*PI*t/5.7)+0.02*sin(2*PI*t/0.7)+0.01*sin(2*PI*t/17)':contrast='1.15+0.06*sin(2*PI*t/9)':saturation='1.7+0.25*sin(2*PI*t/11)':eval=frame[flicker];\
+    [f4]eq=brightness=0.06*sin(2*PI*t/2.3)+0.04*sin(2*PI*t/5.7)+0.02*sin(2*PI*t/0.7)+0.01*sin(2*PI*t/17):contrast=1.15+0.06*sin(2*PI*t/9):saturation=1.7+0.25*sin(2*PI*t/11):eval=frame[flicker];\
     [flicker]colorbalance=rs=0.45:gs=-0.08:bs=-0.35:rm=0.3:gm=-0.04:bm=-0.28:rh=0.15:gh=-0.02:bh=-0.12[warm];\
     [warm]vignette=PI/3[vout]`,
 
@@ -542,7 +542,7 @@ const VISUAL_EFFECTS = {
     [fog_drift][drift_snow1]blend=all_mode=screen:all_opacity=0.12[s1];\
     [s1][drift_snow2]blend=all_mode=screen:all_opacity=0.07[s2];\
     [s2][drift_snow3]blend=all_mode=screen:all_opacity=0.04[s3];\
-    [s3]eq=brightness='0.008*sin(2*PI*t/50)+0.004*sin(2*PI*t/130)':saturation='1.0+0.04*sin(2*PI*t/70)':eval=frame[breathe];\
+    [s3]eq=brightness=0.008*sin(2*PI*t/50)+0.004*sin(2*PI*t/130):saturation=1.0+0.04*sin(2*PI*t/70):eval=frame[breathe];\
     [breathe]colorbalance=bs=0.05:bm=0.03:gs=0.01[tint];\
     [tint]vignette=PI/4[vout]`,
 };
