@@ -679,6 +679,21 @@ async function runX() {
       results.tweets++;
       trackPost('x', queued ? 'queued' : 'generated', `tweet:${data.data.id}`, tweetText);
       console.log(`[X] Posted tweet: ${data.data.id}`);
+
+      // Self-reply boosts algorithmic reach — algorithm sees author engagement as quality signal
+      try {
+        const selfReplies = [
+          'Try it free: snipelink.com',
+          'Zero monthly fees. Zero middlemen. snipelink.com',
+          'Accept SOL, USDC, or PayPal with one link: snipelink.com',
+          'Built for developers who hate payment processor fees.',
+          'No signup needed. Just create a payment link and share it.',
+        ];
+        const selfReply = selfReplies[Math.floor(Math.random() * selfReplies.length)];
+        await sleep(3000);
+        await postTweet(selfReply, data.data.id);
+        console.log(`[X] Self-replied for reach boost`);
+      } catch (e) { /* self-reply is optional, don't fail the run */ }
     } else {
       console.log(`[X] Post failed: ${JSON.stringify(data).slice(0, 150)}`);
       results.errors.push(`X post: ${data.detail || data.title || JSON.stringify(data).slice(0, 100)}`);
@@ -709,6 +724,12 @@ async function runXEngagement() {
       `"code review" developer -is:retweet lang:en ${BLOCK_WORDS}`,
       `"freelance developer" crypto -is:retweet lang:en ${BLOCK_WORDS}`,
       `solana ecosystem project -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"stripe fees" developer -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"crypto payments" freelance -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"payment link" solana -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"accept crypto" developer -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"coinbase commerce" -is:retweet lang:en ${BLOCK_WORDS}`,
+      `"payment processing" fees developer -is:retweet lang:en ${BLOCK_WORDS}`,
     ];
     const query = queries[Math.floor(Math.random() * queries.length)];
     const searchData = await searchTweets(query, 10);
