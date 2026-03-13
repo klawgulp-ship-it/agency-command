@@ -28,7 +28,7 @@ import { runAutoAgent } from './services/autoAgent.js';
 import { runAutoBidder } from './services/freelanceBidder.js';
 import { runSecurityScanner } from './services/securityScanner.js';
 import { runMarketingAgent } from './services/marketingAgent.js';
-import { runSocialAgent } from './services/socialAgent.js';
+import { runSocialAgent, runXReplyGuy, runXHypeMan } from './services/socialAgent.js';
 import { runGiveawayAgent, getPendingWinners, markGiveawaySent } from './services/giveawayAgent.js';
 import { runYouTubeAgent, getYouTubeOAuthUrl, exchangeYouTubeCode } from './services/youtubeAgent.js';
 import { getOverdueInvoices, markReminderSent } from './services/payments.js';
@@ -110,6 +110,21 @@ app.post('/api/youtube/run', async (req, res) => {
   try {
     console.log('[API] Manual YouTube agent trigger');
     const result = await runYouTubeAgent();
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── X Agent Army Manual Triggers ───────────────────────
+app.post('/api/x/reply-guy', async (req, res) => {
+  try {
+    const result = await runXReplyGuy();
+    res.json(result);
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/x/hype-man', async (req, res) => {
+  try {
+    const result = await runXHypeMan();
     res.json(result);
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
@@ -240,7 +255,7 @@ cron.schedule('55 */6 * * *', async () => {
   } catch (e) { console.error('[CRON] Security scanner failed:', e.message); }
 });
 
-// ─── Cron: Social agent every 90 min ─────────────────────
+// ─── Cron: Social agent every 90 min (posts across all platforms) ──
 cron.schedule('15,45 */1 * * *', async () => {
   console.log('[CRON] Running social agent...');
   try {
@@ -249,6 +264,29 @@ cron.schedule('15,45 */1 * * *', async () => {
       (result.telegram?.messages || 0) + (result.bluesky?.posts || 0);
     if (total > 0) console.log(`[CRON] Social: ${total} posts across platforms`);
   } catch (e) { console.error('[CRON] Social agent failed:', e.message); }
+});
+
+// ═══ X AGENT ARMY — 4 independent background agents on staggered schedules ═══
+// Each agent has a specific role and runs on its own timer for constant presence
+
+// X Reply Guy — every 20 min — finds convos, drops ⚡ and fire replies
+cron.schedule('*/20 * * * *', async () => {
+  console.log('[CRON] X Reply Guy hunting conversations...');
+  try {
+    const result = await runXReplyGuy();
+    const total = (result.replies || 0) + (result.hypeReplies || 0);
+    if (total > 0) console.log(`[CRON] X Reply Guy: ${result.replies} thoughtful + ${result.hypeReplies} hype replies`);
+  } catch (e) { console.error('[CRON] X Reply Guy failed:', e.message); }
+});
+
+// X Hype Man — every 30 min — boosts own threads, replies to mentions with energy
+cron.schedule('8,38 * * * *', async () => {
+  console.log('[CRON] X Hype Man boosting threads...');
+  try {
+    const result = await runXHypeMan();
+    const total = (result.selfReplies || 0) + (result.mentionReplies || 0);
+    if (total > 0) console.log(`[CRON] X Hype Man: ${result.selfReplies} thread boosts + ${result.mentionReplies} mention replies`);
+  } catch (e) { console.error('[CRON] X Hype Man failed:', e.message); }
 });
 
 // ─── Cron: YouTube agent every 2 hours ──────────────────

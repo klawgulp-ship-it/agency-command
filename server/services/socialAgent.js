@@ -706,15 +706,270 @@ async function runX() {
   return results;
 }
 
+// ═══════════════════════════════════════════════════════════
+// X REPLY GUY — Finds convos and drops fire replies with personality
+// Runs independently on its own schedule for constant presence
+// ═══════════════════════════════════════════════════════════
+
+const BLOCK_WORDS = '-pig -pigs -findom -finsub -cashslave -paypig -slave -tribute -goddess -mistress -domme -nsfw -porn -xxx -onlyfans -scam -rug -rugged -honeypot';
+const BLOCK_REGEX = /pay\s*pig|findom|finsub|cash\s*slave|tribute|goddess|mistress|domme|nsfw|porn|onlyfans|rug\s*pull|honeypot|send\s*me\s*money/i;
+
+// Hype phrases the reply guy uses — keeps it natural by rotating
+const HYPE_REPLIES = [
+  '⚡ this is the way',
+  'LFGG!! 🔥',
+  '⚡⚡⚡',
+  'this is so fire 🔥',
+  'LFG!! been waiting for this',
+  '⚡ building different',
+  'absolute W 🔥',
+  'this right here ⚡',
+  'WAGMI 🔥⚡',
+  'someone had to say it ⚡',
+  'facts ⚡🔥',
+  'the future is being built right now ⚡',
+  'dev energy ⚡⚡',
+  'shipping > talking. LFGG',
+  '🔥🔥 love to see it',
+];
+
+// Reply guy search queries — broader than engagement to find conversations to jump into
+const REPLY_GUY_QUERIES = [
+  `"solana" "building" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"crypto payments" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"web3 developer" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"freelance dev" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"shipping code" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"launched" "project" developer -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"payment link" OR "payment page" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"open source" contributor -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"just deployed" OR "just shipped" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"accept crypto" OR "crypto checkout" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"indie hacker" building -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"solana ecosystem" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"USDC" developer -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"stripe alternative" -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"devtools" OR "dev tool" launched -is:retweet lang:en ${BLOCK_WORDS}`,
+  `"npm package" published -is:retweet lang:en ${BLOCK_WORDS}`,
+];
+
+export async function runXReplyGuy() {
+  const results = { replies: 0, hypeReplies: 0, errors: [] };
+  if (!process.env.X_API_KEY || !process.env.X_ACCESS_TOKEN) {
+    results.errors.push('No X credentials');
+    return results;
+  }
+
+  console.log('[X-REPLY-GUY] Hunting for conversations...');
+
+  try {
+    // Pick 2 random queries to search
+    const shuffled = [...REPLY_GUY_QUERIES].sort(() => Math.random() - 0.5);
+    const searchQueries = shuffled.slice(0, 2);
+
+    for (const query of searchQueries) {
+      try {
+        const searchData = await searchTweets(query, 10);
+        let tweets = searchData.data || [];
+        tweets = tweets.filter(t => !BLOCK_REGEX.test(t.text));
+
+        // Sort by engagement — reply to tweets people are actually reading
+        tweets.sort((a, b) => (b.public_metrics?.like_count || 0) - (a.public_metrics?.like_count || 0));
+
+        // Check we haven't already replied to these tweets
+        const repliedTo = db.prepare(`SELECT target FROM social_posts WHERE platform = 'x' AND action_type IN ('reply', 'hype-reply') AND created_at > datetime('now', '-7 days')`).all().map(r => r.target);
+
+        for (const tw of tweets.slice(0, 5)) {
+          if (repliedTo.includes(`reply:${tw.id}`)) continue;
+
+          const likes = tw.public_metrics?.like_count || 0;
+
+          // High-engagement tweets (10+ likes) get a thoughtful reply with snipelink mention
+          if (likes >= 10) {
+            try {
+              const replyText = await askClaude(`Someone tweeted: "${tw.text.slice(0, 200)}"
+
+Write a short, genuine reply (under 240 chars) that:
+- Adds value or shares a real take
+- Sounds like an excited developer, not a brand
+- Can use ⚡ or 🔥 naturally
+- If they're talking about payments/crypto/freelance, casually mention snipelink.com
+- If not payment-related, just be a genuinely engaged dev
+- Never start with "Great point!" or "This is so true!"
+- Can say LFGG, LFG, or "building different" if it fits
+- Be natural, not cringe
+
+IMPORTANT: Return ONLY the reply text. No quotes, no labels.`);
+
+              if (replyText && !replyText.includes('SKIP') && replyText.length > 5 && replyText.length <= 280) {
+                trackSpend('social-agent-haiku', 0.001);
+                const data = await postTweet(replyText, tw.id);
+                if (data.data?.id) {
+                  results.replies++;
+                  trackPost('x', 'reply', `reply:${tw.id}`, replyText);
+                  console.log(`[X-REPLY-GUY] Replied to ${tw.id} (${likes} likes): ${replyText.slice(0, 60)}...`);
+                }
+                await sleep(2000);
+              }
+            } catch (e) {}
+          }
+          // Lower engagement tweets get a quick hype reply — fast, cheap, high volume
+          else if (likes >= 2) {
+            try {
+              const hype = HYPE_REPLIES[Math.floor(Math.random() * HYPE_REPLIES.length)];
+              const data = await postTweet(hype, tw.id);
+              if (data.data?.id) {
+                results.hypeReplies++;
+                trackPost('x', 'hype-reply', `reply:${tw.id}`, hype);
+                console.log(`[X-REPLY-GUY] Hype replied to ${tw.id}: ${hype}`);
+              }
+              await sleep(1500);
+            } catch (e) {}
+          }
+        }
+
+        await sleep(2000); // Pace between searches
+      } catch (e) {
+        results.errors.push(`Reply search: ${e.message?.slice(0, 80)}`);
+      }
+    }
+  } catch (e) {
+    results.errors.push(`X reply guy: ${e.message}`);
+  }
+
+  console.log(`[X-REPLY-GUY] Done: ${results.replies} thoughtful + ${results.hypeReplies} hype replies`);
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
+// X HYPE MAN — Replies to own tweets, mentions, boosts energy
+// Keeps the thread alive and signals engagement to algorithm
+// ═══════════════════════════════════════════════════════════
+
+export async function runXHypeMan() {
+  const results = { selfReplies: 0, mentionReplies: 0, errors: [] };
+  if (!process.env.X_API_KEY || !process.env.X_ACCESS_TOKEN) {
+    results.errors.push('No X credentials');
+    return results;
+  }
+
+  const userId = process.env.X_ACCESS_TOKEN.split('-')[0];
+  console.log('[X-HYPE-MAN] Boosting threads and handling mentions...');
+
+  try {
+    // 1. Find our recent tweets and add follow-up replies to keep threads alive
+    const recentTweets = db.prepare(`
+      SELECT target, content FROM social_posts
+      WHERE platform = 'x' AND action_type IN ('queued', 'generated')
+      AND created_at > datetime('now', '-12 hours')
+      ORDER BY created_at DESC LIMIT 5
+    `).all();
+
+    const alreadyHyped = db.prepare(`
+      SELECT target FROM social_posts
+      WHERE platform = 'x' AND action_type = 'self-hype'
+      AND created_at > datetime('now', '-12 hours')
+    `).all().map(r => r.target);
+
+    for (const tweet of recentTweets) {
+      const tweetId = tweet.target?.replace('tweet:', '');
+      if (!tweetId || alreadyHyped.includes(`hype:${tweetId}`)) continue;
+
+      // Add a value-add follow-up to our own tweet
+      const followUps = [
+        '⚡ Drop your SOL address if you want to test it out',
+        'Zero fees. Zero middlemen. Just payments. snipelink.com ⚡',
+        'Been building this for months. Finally feels right 🔥',
+        'DMs open if you want to collab ⚡',
+        'More shipping this week. Stay locked in 🔥',
+        'The grind never stops ⚡⚡ snipelink.com',
+        'LFGG!! This is just the beginning 🔥',
+        'Devs supporting devs. That\'s the whole mission ⚡',
+        'If you\'re building on Solana, you need this. snipelink.com',
+        'Every feature ships free. No paywalls. No BS. ⚡',
+      ];
+      const followUp = followUps[Math.floor(Math.random() * followUps.length)];
+
+      try {
+        const data = await postTweet(followUp, tweetId);
+        if (data.data?.id) {
+          results.selfReplies++;
+          trackPost('x', 'self-hype', `hype:${tweetId}`, followUp);
+          console.log(`[X-HYPE-MAN] Thread boost on ${tweetId}: ${followUp.slice(0, 50)}`);
+        }
+        await sleep(2000);
+      } catch (e) {}
+    }
+
+    // 2. Check mentions and reply with energy
+    try {
+      const mentionsUrl = `https://api.twitter.com/2/users/${userId}/mentions?max_results=10&tweet.fields=public_metrics,author_id,conversation_id`;
+      const mentionsAuth = await signTwitterRequest('GET', mentionsUrl);
+      const mentionsRes = await fetch(mentionsUrl, {
+        headers: { ...mentionsAuth },
+        signal: AbortSignal.timeout(10000),
+      });
+      const mentionsData = await mentionsRes.json();
+      const mentions = (mentionsData.data || []).filter(t => !BLOCK_REGEX.test(t.text));
+
+      const repliedMentions = db.prepare(`
+        SELECT target FROM social_posts
+        WHERE platform = 'x' AND action_type = 'mention-reply'
+        AND created_at > datetime('now', '-7 days')
+      `).all().map(r => r.target);
+
+      for (const mention of mentions.slice(0, 3)) {
+        if (repliedMentions.includes(`mention:${mention.id}`)) continue;
+        if (mention.author_id === userId) continue; // Don't reply to ourselves
+
+        try {
+          const replyText = await askClaude(`Someone mentioned us in a tweet: "${mention.text.slice(0, 200)}"
+
+Write a short, energetic reply (under 200 chars) that:
+- Thanks them or engages with what they said
+- Uses ⚡ or 🔥 emoji naturally
+- Can say things like "LFGG", "appreciate you", "building different"
+- Mentions snipelink.com if they're asking about the product
+- Sounds like a real person, not corporate
+- Never says "Thank you for your support" or anything cringe
+
+IMPORTANT: Return ONLY the reply text.`);
+
+          if (replyText && replyText.length > 3 && replyText.length <= 280) {
+            trackSpend('social-agent-haiku', 0.001);
+            const data = await postTweet(replyText, mention.id);
+            if (data.data?.id) {
+              results.mentionReplies++;
+              trackPost('x', 'mention-reply', `mention:${mention.id}`, replyText);
+              console.log(`[X-HYPE-MAN] Replied to mention ${mention.id}: ${replyText.slice(0, 50)}`);
+            }
+            await sleep(2000);
+          }
+        } catch (e) {}
+      }
+    } catch (e) {
+      results.errors.push(`Mentions: ${e.message?.slice(0, 80)}`);
+    }
+  } catch (e) {
+    results.errors.push(`X hype man: ${e.message}`);
+  }
+
+  console.log(`[X-HYPE-MAN] Done: ${results.selfReplies} thread boosts + ${results.mentionReplies} mention replies`);
+  return results;
+}
+
+// ═══════════════════════════════════════════════════════════
+// X ENGAGER — Likes, RTs, quote tweets (the original engagement agent)
+// ═══════════════════════════════════════════════════════════
+
 async function runXEngagement() {
   const results = { likes: 0, replies: 0, retweets: 0, errors: [] };
   if (!process.env.X_API_KEY || !process.env.X_ACCESS_TOKEN) return results;
 
   const userId = process.env.X_ACCESS_TOKEN.split('-')[0];
+  console.log('[X-ENGAGER] Running likes, RTs, quote tweets...');
 
   try {
-    // Search quality dev/crypto topics — negative filters block spam/scam/NSFW
-    const BLOCK_WORDS = '-pig -pigs -findom -finsub -cashslave -paypig -slave -tribute -goddess -mistress -domme -nsfw -porn -xxx -onlyfans -scam -rug -rugged -honeypot';
     const queries = [
       `"solana developer" -is:retweet lang:en ${BLOCK_WORDS}`,
       `"building on solana" -is:retweet lang:en ${BLOCK_WORDS}`,
@@ -735,11 +990,7 @@ async function runXEngagement() {
     const searchData = await searchTweets(query, 10);
     let tweets = searchData.data || [];
 
-    // Extra safety: filter out any tweet with sketchy content
-    const BLOCK_REGEX = /pay\s*pig|findom|finsub|cash\s*slave|tribute|goddess|mistress|domme|nsfw|porn|onlyfans|rug\s*pull|honeypot|send\s*me\s*money/i;
     tweets = tweets.filter(t => !BLOCK_REGEX.test(t.text));
-
-    // Sort by engagement
     tweets.sort((a, b) => (b.public_metrics?.like_count || 0) - (a.public_metrics?.like_count || 0));
 
     // Like quality tweets
@@ -775,10 +1026,10 @@ async function runXEngagement() {
           });
           if (rtRes.ok) {
             results.retweets++;
-            console.log(`[X] Retweeted: "${rtCandidate.text.slice(0, 80)}..."`);
+            console.log(`[X-ENGAGER] Retweeted: "${rtCandidate.text.slice(0, 80)}..."`);
           }
         } else {
-          console.log(`[X] Skipped RT (failed quality check): "${rtCandidate.text.slice(0, 80)}..."`);
+          console.log(`[X-ENGAGER] Skipped RT (failed quality check): "${rtCandidate.text.slice(0, 80)}..."`);
         }
       } catch (e) {}
     }
@@ -787,7 +1038,7 @@ async function runXEngagement() {
     const quotable = tweets.find(t => (t.public_metrics?.like_count || 0) > 10 && t.id !== rtCandidate?.id);
     if (quotable) {
       try {
-        const quoteText = await askClaude(`A developer tweeted: "${quotable.text.slice(0, 200)}"\n\nWrite a quote tweet (under 250 chars) that adds a genuine dev perspective. Mention snipelink.com only if relevant. Sound like a real developer. No emojis. If the original tweet is spam, scam, NSFW, or low quality, respond with just "SKIP".`);
+        const quoteText = await askClaude(`A developer tweeted: "${quotable.text.slice(0, 200)}"\n\nWrite a quote tweet (under 250 chars) that adds a genuine dev perspective. Can use ⚡ or 🔥 if it fits. Mention snipelink.com only if relevant. Sound like a real developer. If the original tweet is spam, scam, NSFW, or low quality, respond with just "SKIP".`);
         if (quoteText && !quoteText.includes('SKIP') && quoteText.length > 10 && quoteText.length <= 280) {
           trackSpend('social-agent-haiku', 0.001);
           const qtUrl = 'https://api.twitter.com/2/tweets';
@@ -1001,7 +1252,7 @@ export async function runSocialAgent() {
   console.log('[SOCIAL] Starting multi-platform social agent...');
   const startTime = Date.now();
 
-  const [reddit, discord, telegram, bluesky, nostr, mastodon, x, nostrEngage, mastodonEngage, blueskyEngage, xEngage] = await Promise.allSettled([
+  const [reddit, discord, telegram, bluesky, nostr, mastodon, x, nostrEngage, mastodonEngage, blueskyEngage] = await Promise.allSettled([
     runReddit(),
     runDiscord(),
     runTelegram(),
@@ -1012,10 +1263,9 @@ export async function runSocialAgent() {
     runNostrEngagement(),
     runMastodonEngagement(),
     runBlueskyEngagement(),
-    runXEngagement(),
   ]);
 
-  const settled = { reddit, discord, telegram, bluesky, nostr, mastodon, x, nostrEngage, mastodonEngage, blueskyEngage, xEngage };
+  const settled = { reddit, discord, telegram, bluesky, nostr, mastodon, x, nostrEngage, mastodonEngage, blueskyEngage };
   const results = { duration: Date.now() - startTime };
   for (const [k, v] of Object.entries(settled)) {
     results[k] = v.status === 'fulfilled' ? v.value : { errors: [v.reason?.message] };
@@ -1027,11 +1277,11 @@ export async function runSocialAgent() {
     (results.x?.tweets || 0) +
     (results.nostrEngage.likes || 0) + (results.nostrEngage.follows || 0) +
     (results.mastodonEngage.favourites || 0) + (results.mastodonEngage.follows || 0) +
-    (results.blueskyEngage.likes || 0) + (results.xEngage?.likes || 0);
+    (results.blueskyEngage.likes || 0);
 
   console.log(`[SOCIAL] Done in ${results.duration}ms: ${totalActions} actions`);
   console.log(`[SOCIAL] Reddit: ${results.reddit.comments || 0} | Discord: ${results.discord.posts || 0} | Telegram: ${results.telegram.messages || 0} | Bluesky: ${results.bluesky.posts || 0} | Nostr: ${results.nostr.posts || 0} | Mastodon: ${results.mastodon.posts || 0} | X: ${results.x?.tweets || 0}`);
-  console.log(`[SOCIAL] Engagement — Nostr: ${results.nostrEngage.likes || 0} likes/${results.nostrEngage.follows || 0} follows | Mastodon: ${results.mastodonEngage.favourites || 0} favs/${results.mastodonEngage.follows || 0} follows | Bluesky: ${results.blueskyEngage.likes || 0} likes | X: ${results.xEngage?.likes || 0} likes`);
+  console.log(`[SOCIAL] Engagement — Nostr: ${results.nostrEngage.likes || 0} likes/${results.nostrEngage.follows || 0} follows | Mastodon: ${results.mastodonEngage.favourites || 0} favs/${results.mastodonEngage.follows || 0} follows | Bluesky: ${results.blueskyEngage.likes || 0} likes`);
 
   if (totalActions > 0) {
     notify('social', `Social agent: ${totalActions} posts across platforms`, JSON.stringify(results));
